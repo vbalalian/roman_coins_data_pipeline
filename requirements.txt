@@ -7,3 +7,4 @@ uvicorn[standard]==0.23.2
 jupyter
 matplotlib
 seaborn
+lxml
