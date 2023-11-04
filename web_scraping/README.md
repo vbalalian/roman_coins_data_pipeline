@@ -1,0 +1,2 @@
+# Building a dataset on coins from the Roman Empire, scraping data from wildwinds.com
+wildwinds.com, written in html, has extensive data on ancient coins organized into various periods. Much of the data is mixed among string descriptions. This webscraper scrapes data from the website section dedicated to coins from of the Roman Empire, which are contained on separate pages for each emperor/figurehead.
