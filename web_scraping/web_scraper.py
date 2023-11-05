@@ -71,11 +71,11 @@ def scrape(url_roots: list[str]):
     combined_pages_html = []
     max_length = 0
     for root in url_roots:
-        sleep(30)
         url = root + 'i.html'
         message = f'requesting {url} ({url_roots.index(root) + 1}/{len(url_roots)})'
         max_length = max(max_length, len(message))
         print(f'\r{message.ljust(max_length)}', end=' ', flush=True)
+        sleep(30)
         page_html = requests.get(url)
         combined_pages_html.append(page_html)
     # After the loop, print a final message that clears the last line
@@ -582,7 +582,7 @@ roman_coins_raw.describe()
 # In[163]:
 
 
-roman_coins = roman_coins_raw.drop_duplicates(subset=['id'], keep='first').reset_index()
+roman_coins = roman_coins_raw.drop_duplicates(subset=['id'], keep='first')
 
 
 # In[164]:
@@ -600,7 +600,7 @@ roman_coins['era'] = pd.Categorical(roman_coins['era'], categories=era_categorie
 
 
 # Export roman_coins DataFrame as csv
-roman_coins.to_csv('roman_coins.csv')
+roman_coins.to_csv('roman_coins.csv', index=False)
 
 
 # In[166]:
