@@ -26,6 +26,7 @@ async def read_coins(
     page: int = 1, 
     page_size: int = 10, 
     sort_by: Optional[str] = None,
+    title: Optional[str] = None,
     metal: Optional[str] = None,
     era: Optional[str] = None,
     year: Optional[str] = None
@@ -36,6 +37,8 @@ async def read_coins(
     end = start + page_size
     data = df
 
+    if title:
+        data = data[data['title'] == title]
     if metal:
         data = data[data['metal'] == metal]
     if era:
