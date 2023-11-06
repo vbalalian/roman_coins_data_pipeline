@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 from fastapi import FastAPI
-from typing import Optional
 
 app = FastAPI()
 
@@ -25,11 +24,11 @@ async def root():
 async def read_coins(
     page: int = 1, 
     page_size: int = 10, 
-    sort_by: Optional[str] = None,
-    ruler: Optional[str] = None,
-    metal: Optional[str] = None,
-    era: Optional[str] = None,
-    year: Optional[str] = None
+    sort_by: str = None,
+    ruler: str = None,
+    metal: str = None,
+    era: str = None,
+    year: str = None
 
     ):
 
@@ -50,7 +49,7 @@ async def read_coins(
     return data.iloc[start:end].to_dict(orient='records')
 
 @app.get('/coins/search')
-async def search_coins(query: Optional[str] = None):
+async def search_coins(query: str = None):
     if query:
         search_result = df[df['description'].str.contains(query, na=False)]
         return search_result.to_dict(orient='records')
