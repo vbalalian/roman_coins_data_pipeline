@@ -16,20 +16,13 @@ import re
 pp = pprint.PrettyPrinter(compact=True)
 
 
-# ### Scrape link directory
+# Scrape link directory
 # Using BeautifulSoup, we'll scrape wildwinds.com/coins/ric/i.html for landing pages of coin subjects  in alphabetical order. As of 11/3/2023, wildwinds.com/robots.txt grants permission for webscraping requests, provided there is a delay of 30 seconds between each request, and that the webscraping software is not explicitly blacklisted.
-
-# In[3]:
-
 
 with requests.get('https://www.wildwinds.com/coins/ric/i.html') as raw:
     soup = BeautifulSoup(raw.content, 'lxml')
 
-
-# ### Parse html data for a clean list of ruler names
-
-# In[4]:
-
+# Parse html data for a clean list of ruler names
 
 options = soup.find_all('option')
 emperors_raw = [i.contents for i in options if i.attrs['value'] != ''][:-6]
@@ -40,31 +33,20 @@ for line in emperors_raw:
 print(f'First five: {emperors[:5]} \nLast five: {emperors[-5:]} \n{len(emperors)} emperors total')
 
 
-# ### Generate list of usable link roots for each Emperor's coin page
-
-# In[5]:
-
+# Generate list of usable link roots for each Emperor's coin page
 
 # wildwinds.com/robots.txt requires a 30-second delay between requests
 linkroots = ['https://www.wildwinds.com/coins/ric/' + i.attrs['value'][:-6] for i in options if i.attrs['value'] != ''][:-6]
 print(f'First five: {linkroots[:5]} \nLast five: {linkroots[-5:]} \n{len(linkroots)} linkroots total')
 
-
-# ### Create a semi-random list of test pages for building an adaptable parser
-
-# In[6]:
-
+# Create a semi-random list of test pages for building an adaptable parser
 
 test_ids = random.choices(range(len(linkroots)), k=10) # 10 random index numbers
 test_roots = [linkroots[i] for i in test_ids] # Corresponding url roots
 for root in test_roots:
     print(root)
 
-
-# ### pull html from test pages
-
-# In[7]:
-
+# pull html from test pages
 
 # Define function that scrapes indicated pages with 30-second delay between requests
 def scrape(url_roots: list[str]):
@@ -82,33 +64,18 @@ def scrape(url_roots: list[str]):
     print(f'\rscraping complete: {url_roots.index(root) + 1}/{len(url_roots)}'.ljust(max_length))
     return combined_pages_html
 
-
-# In[8]:
-
-
 # Scrape test pages' html (this takes some time with the delay)
 test_pages = scrape(test_roots)
 
-
-# ### Inspect test page html
-
-# In[9]:
-
+# Inspect test page html
 
 # Convert page html into easier-to-manipulate format using BeautifulSoup
 test_soups = [BeautifulSoup(page.content, 'lxml') for page in test_pages]
 
-
-# In[10]:
-
-
 print(f'Test soup preview: \n\n{str(test_soups[5])[:2000]}')
 
 
-# ### Create helper functions for parsing data fields
-
-# In[11]:
-
+# Create helper functions for parsing data fields
 
 # Define function for parsing names of coin subjects
 def pull_title(soup):
@@ -118,25 +85,13 @@ def pull_title(soup):
         sep_index = raw_title.find('-')
     return raw_title[:sep_index].strip() if sep_index != -1 else raw_title.strip()
 
-
-# In[12]:
-
-
 # Function to test pull_title()
 def test_pull_title(soups): 
     titles = pd.Series([pull_title(soup) for soup in soups])
     print(f'Out of {len(soups)} soups, {titles.isna().sum()} have missing titles.')
-    pp.pprint(titles.tolist())
-
-
-# In[13]:
-
+    pp.pprint(titles.tolist()[:20])
 
 test_pull_title(test_soups)
-
-
-# In[14]:
-
 
 # Function to pull subtitles
 def pull_subtitle(soup):
@@ -162,43 +117,23 @@ def pull_subtitle(soup):
     
     return None
 
-
-# In[15]:
-
-
 # Function to test pull_subtitle()
 def test_pull_subtitle(soups):
     subtitles = pd.Series([pull_subtitle(soup) for soup in soups])
     print(f'Out of {len(soups)} soups, {subtitles.isna().sum()} are missing subtitles.')
-    pp.pprint(subtitles.tolist()) 
-
-
-# In[16]:
-
+    pp.pprint(subtitles.tolist()[:15]) 
 
 test_pull_subtitle(test_soups)
-
-
-# In[17]:
-
 
 # Function to pull raw coin data
 def pull_coins(soup):
     coins = [coin.contents for coin in soup.find_all('tr') if len(coin) >2 and 'bgcolor' in str(coin)]
     return coins
 
-
-# In[32]:
-
-
 # Test pull_coins
 test_coins = pull_coins(test_soups[3])
 print(f'{len(test_coins)} test coins. Raw data:\n')
 pp.pprint(test_coins[:5])
-
-
-# In[30]:
-
 
 # Function to pull coin descriptions
 def coin_description(coin):
@@ -211,25 +146,13 @@ def coin_description(coin):
     except IndexError:
         return None
 
-
-# In[21]:
-
-
 # Function to test coin_description()
 def test_coin_description(coins):
     descriptions = pd.Series([coin_description(coin) for coin in coins])
     print(f'Out of {len(coins)} coins, {descriptions.isna().sum()} are missing description value(s)')
-    pp.pprint(descriptions.tolist())
-
-
-# In[31]:
-
+    pp.pprint(descriptions.tolist()[:10])
 
 test_coin_description(test_coins)
-
-
-# In[115]:
-
 
 # Function to identify coin metal
 def coin_metal(coin):
@@ -243,25 +166,13 @@ def coin_metal(coin):
         return None
     return metal
 
-
-# In[116]:
-
-
 # Function to test previous function coin_metal()
 def test_coin_metal(coins):
     metals = pd.Series([coin_metal(coin) for coin in coins])
     print(f'Out of {len(coins)} coins, {metals.isna().sum()} are missing metal value(s)')
-    pp.pprint(metals.tolist())
-
-
-# In[117]:
-
+    pp.pprint(metals.tolist()[:25])
 
 test_coin_metal(test_coins)
-
-
-# In[118]:
-
 
 # Function to pull coin era (i.e. 'AD' or 'BC') 
 def coin_era(coin):
@@ -292,10 +203,6 @@ def coin_year(coin):
     else:
         return None
 
-
-# In[119]:
-
-
 # Function to test coin_era() and coin_year()
 def test_coin_era_and_year(coins):
     eras = [coin_era(coin) for coin in coins]
@@ -304,20 +211,12 @@ def test_coin_era_and_year(coins):
     print(f'Out of {len(coins)} coins:')
     print(f'{df.eras.isna().sum()} are missing era value(s).')
     print(f'{df.years.isna().sum()} are missing year value(s).')
-    pp.pprint(eras)
-    pp.pprint(years)
-
-
-# In[120]:
-
+    pp.pprint(eras[:25])
+    pp.pprint(years[:25])
 
 test_coin_era_and_year(test_coins)
 
-
 # wildwinds.com/robots.txt forbids use of their images, so those urls will not be parsed
-
-# In[121]:
-
 
 # Function to pull .txt urls
 def coin_txt(coin):
@@ -326,25 +225,13 @@ def coin_txt(coin):
         if match:
             return match.group(1)
 
-
-# In[122]:
-
-
 # Function to test previous function coin_metal()
 def test_coin_txt(coins):
     txt = pd.Series([coin_txt(coin) for coin in coins])
     print(f'Out of {len(coins)} coins, {txt.isna().sum()} are missing .txt value(s)')
-    pp.pprint(txt.tolist())
-
-
-# In[123]:
-
+    pp.pprint(txt.tolist()[:25])
 
 test_coin_txt(test_coins)
-
-
-# In[124]:
-
 
 # Function to pull coin ids from jpg or txt urls
 def coin_id(coin):
@@ -353,25 +240,13 @@ def coin_id(coin):
     if match:
         return match.group(1)
 
-
-# In[125]:
-
-
 # Function to test previous function coin_id()
 def test_coin_id(coins):
     id = pd.Series([coin_id(coin) for coin in coins])
     print(f'Out of {len(coins)} coins, {id.isna().sum()} are missing id value(s)')
-    pp.pprint(id.tolist())
-
-
-# In[126]:
-
+    pp.pprint(id.tolist()[:25])
 
 test_coin_id(test_coins)
-
-
-# In[127]:
-
 
 # Function to pull coin mass (in grams)
 def coin_mass(coin):
@@ -395,25 +270,13 @@ def coin_mass(coin):
             
     return None
 
-
-# In[128]:
-
-
 # Function to test coin_mass()
 def test_coin_mass(coins):
     mass = pd.Series([coin_mass(coin) for coin in coins])
     print(f'Out of {len(coins)} coins, {mass.isna().sum()} are missing mass value(s)')
-    pp.pprint(mass.tolist())
-
-
-# In[129]:
-
+    pp.pprint(mass.tolist()[:25])
 
 test_coin_mass(test_coins)
-
-
-# In[130]:
-
 
 # Function to pull coin diameter (in mm)
 def coin_diameter(coin):
@@ -427,28 +290,17 @@ def coin_diameter(coin):
     
     return None
 
-
-# In[131]:
-
-
 # Function to test coin_diameter()
 def test_coin_diameter(coins):
     diameter = pd.Series([coin_diameter(coin) for coin in coins])
     print(f'Out of {len(coins)} coins, {diameter.isna().sum()} are missing diameter value(s)')
-    pp.pprint(diameter.tolist())
-
-
-# In[132]:
-
+    pp.pprint(diameter.tolist()[:25])
 
 test_coin_diameter(test_coins)
 
 
-# ### Check for common inscriptions
+# Check for common inscriptions
 # ...such as "AVG" (Augustus, title of the emperor), "IMP" (Imperator (victorious general), received upon accession), "CAES" (Caesar, inherited name of the Julian family (Julius Caesar), used by later emperors to designate heir), "GERM" (Germanicus, a title honoring military victories in Germany), "COS" or "CONSVL" (Consul, a title linked to highest office in Senate, usually held by emperor), "PO" (Pontifex Maximus, highest priest, the head of state religion), "PP" (Pater Patriae, father of the country), "PF" (Pius Felix, reverent or dutiful), "SC" (Senatus Consultus), "TPP" (Tribunica Potestate, tribune of the people, each renewal indicated by numerals), "CENS" (Censor, a public office overseeing taxes, morality, the census and membership in various orders), "BRIT" (Britannicus).
-
-# In[133]:
-
 
 # Function to pull recognized inscriptions
 def coin_inscriptions(coin):
@@ -460,26 +312,14 @@ def coin_inscriptions(coin):
     unique_inscriptions = list(set(found_inscriptions))
     return unique_inscriptions if unique_inscriptions else None
 
-
-# In[134]:
-
-
 def test_coin_inscriptions(coins):
     inscriptions = pd.Series([coin_inscriptions(coin) for coin in coins])
     print(f'Out of {len(coins)} coins, {inscriptions.isna().sum()} are missing inscriptions value(s)')
-    pp.pprint(inscriptions.tolist())
-
-
-# In[135]:
-
+    pp.pprint(inscriptions.tolist()[:25])
 
 test_coin_inscriptions(test_coins)
 
-
-# ### Create coin_tests() for a basic summary of function success
-
-# In[136]:
-
+# Create coin_tests() for a basic summary of function success
 
 def coin_tests(soups=test_soups):
     test_coins = []
@@ -515,15 +355,11 @@ def coin_tests(soups=test_soups):
 
 coin_tests()
 
-
-# In[33]:
-
-
 # Function that combines previous helper functions to return coin DataFrame
 def coin_df(soup):
     title = pull_title(soup)
     subtitle = pull_subtitle(soup)
-    id, description, metal, mass, diameter, era, year, inscriptions, jpg, txt = [], [], [], [], [], [], [], [], [], []
+    id, description, metal, mass, diameter, era, year, inscriptions, txt = [], [], [], [], [], [], [], [], []
     for coin in pull_coins(soup):
         id.append(coin_id(coin))
         description.append(coin_description(coin))
@@ -534,92 +370,48 @@ def coin_df(soup):
         year.append(coin_year(coin))
         inscriptions.append(coin_inscriptions(coin))
         txt.append(coin_txt(coin))
-    return pd.DataFrame({'title':title, 'subtitle':subtitle, 'id':id, 'description':description, 'metal':metal, 'mass':mass, \
+    return pd.DataFrame({'ruler':title, 'ruler_detail':subtitle, 'id':id, 'description':description, 'metal':metal, 'mass':mass, \
                         'diameter':diameter, 'era':era, 'year':year, 'inscriptions':inscriptions, 'txt':txt})
 
-
-# In[138]:
-
-
 coin_df(test_soups[2]).head()
-
-
-# In[139]:
-
 
 # Function to combine multiple coin Dataframes
 def combine_coin_dfs(soups):
     dfs = [coin_df(soup) for soup in soups]
     return pd.concat(dfs, ignore_index=True) 
 
-
-# In[140]:
-
-
 len(combine_coin_dfs(test_soups))
 
 
-# ### Pull html from all source pages
+# Pull html from all source pages
 # (pulling from over 200 pages, which takes a couple hours with the 30 second delay between requests)
 
-# In[141]:
-
-
 all_pages = scrape(linkroots)
-
-
-# In[142]:
-
 
 all_soups = [BeautifulSoup(page.content, 'lxml') for page in all_pages]
 
 
-# #### Run tests
-
-# In[143]:
-
+# Run tests
 
 test_pull_title(all_soups)
 test_pull_subtitle(all_soups)
 coin_tests(all_soups)
 
 
-# ## Combine it all into a single Dataframe
-
-# In[144]:
-
+# Combine it all into a single Dataframe
 
 roman_coins_raw = combine_coin_dfs(all_soups)
 
 
-# ### Check data quality
-
-# In[145]:
-
+#Check data quality
 
 roman_coins_raw.head(10)
 
-
-# In[146]:
-
-
 roman_coins_raw.info()
-
-
-# In[147]:
-
 
 roman_coins_raw.describe()
 
-
-# In[1]:
-
-
 roman_coins = roman_coins_raw.drop_duplicates(subset=['id'], keep='first')
-
-
-# In[164]:
-
 
 roman_coins['metal'].fillna('None')
 roman_coins['era'].fillna('None')
@@ -628,21 +420,9 @@ roman_coins['metal'] = pd.Categorical(roman_coins['metal'], categories=metal_cat
 era_categories = ['None', 'BC', 'AD']
 roman_coins['era'] = pd.Categorical(roman_coins['era'], categories=era_categories, ordered=True)
 
-
-# In[165]:
-
-
 # Export roman_coins DataFrame as csv
 roman_coins.to_csv('roman_coins.csv', index=False)
 
-
-# In[166]:
-
-
 roman_coins.info()
-
-
-# In[167]:
-
 
 roman_coins.describe()
