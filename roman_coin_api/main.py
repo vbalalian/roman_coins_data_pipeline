@@ -16,7 +16,7 @@ async def root():
         'documentation':'/docs',
         "endpoints": {
             "/coins": "Retrieve a paginated list of coins with optional sorting and filtering",
-            "/coins/{coin_id}": "Retrieve detailed information about a single coin by its ID",
+            "/coins/id/{coin_id}": "Retrieve detailed information about a single coin by its ID",
             "/coins/search": "Search for coins based on query"
             }
         }
@@ -46,16 +46,16 @@ async def read_coins(
         data = data.sort_values(by=sort_by)
     return data.iloc[start:end].to_dict(orient='records')
 
-@app.get("/coins/{coin_id}")
-async def read_coin(coin_id: str):
-    coin = df[df['id'] == coin_id]
-    if coin.empty:
-        return {"error": "Coin not found"}
-    return coin.iloc[0].to_dict()
-
 @app.get("/coins/search")
 async def search_coins(query: Optional[str] = None):
     if query:
         search_result = df[df['description'].str.contains(query, na=False)]
         return search_result.to_dict(orient='records')
     return {"error": "Query string is empty"}
+
+@app.get("/coins/id/{coin_id}")
+async def read_coin(coin_id: str):
+    coin = df[df['id'] == coin_id]
+    if coin.empty:
+        return {"error": "Coin not found"}
+    return coin.iloc[0].to_dict()
