@@ -14,19 +14,19 @@ async def root():
         'message':'Welcome to the Roman Coin Data API',
         'status':'OK',
         'documentation':'/docs',
-        "endpoints": {
-            "/coins": "Retrieve a paginated list of coins with optional sorting and filtering",
-            "/coins/id/{coin_id}": "Retrieve detailed information about a single coin by its ID",
-            "/coins/search": "Search for coins based on query"
+        'endpoints': {
+            '/coins': 'Retrieve a paginated list of coins with optional sorting and filtering',
+            '/coins/id/{coin_id}': 'Retrieve detailed information about a single coin by its ID',
+            '/coins/search': 'Search for coins based on query'
             }
         }
 
-@app.get("/coins/")
+@app.get('/coins/')
 async def read_coins(
     page: int = 1, 
     page_size: int = 10, 
     sort_by: Optional[str] = None,
-    title: Optional[str] = None,
+    ruler: Optional[str] = None,
     metal: Optional[str] = None,
     era: Optional[str] = None,
     year: Optional[str] = None
@@ -37,8 +37,8 @@ async def read_coins(
     end = start + page_size
     data = df
 
-    if title:
-        data = data[data['title'] == title]
+    if ruler:
+        data = data[data['ruler'] == ruler]
     if metal:
         data = data[data['metal'] == metal]
     if era:
@@ -49,16 +49,16 @@ async def read_coins(
         data = data.sort_values(by=sort_by)
     return data.iloc[start:end].to_dict(orient='records')
 
-@app.get("/coins/search")
+@app.get('/coins/search')
 async def search_coins(query: Optional[str] = None):
     if query:
         search_result = df[df['description'].str.contains(query, na=False)]
         return search_result.to_dict(orient='records')
-    return {"error": "Query string is empty"}
+    return {'error': 'Query string is empty'}
 
-@app.get("/coins/id/{coin_id}")
+@app.get('/coins/id/{coin_id}')
 async def read_coin(coin_id: str):
     coin = df[df['id'] == coin_id]
     if coin.empty:
-        return {"error": "Coin not found"}
+        return {'error': 'Coin not found'}
     return coin.iloc[0].to_dict()
