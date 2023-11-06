@@ -3,7 +3,7 @@
 
 # ### Import libraries
 
-# In[98]:
+# In[2]:
 
 
 import pandas as pd
@@ -19,7 +19,7 @@ pp = pprint.PrettyPrinter(compact=True)
 # ### Scrape link directory
 # Using BeautifulSoup, we'll scrape wildwinds.com/coins/ric/i.html for landing pages of coin subjects  in alphabetical order. As of 11/3/2023, wildwinds.com/robots.txt grants permission for webscraping requests, provided there is a delay of 30 seconds between each request, and that the webscraping software is not explicitly blacklisted.
 
-# In[99]:
+# In[3]:
 
 
 with requests.get('https://www.wildwinds.com/coins/ric/i.html') as raw:
@@ -28,7 +28,7 @@ with requests.get('https://www.wildwinds.com/coins/ric/i.html') as raw:
 
 # ### Parse html data for a clean list of ruler names
 
-# In[100]:
+# In[4]:
 
 
 options = soup.find_all('option')
@@ -42,7 +42,7 @@ print(f'First five: {emperors[:5]} \nLast five: {emperors[-5:]} \n{len(emperors)
 
 # ### Generate list of usable link roots for each Emperor's coin page
 
-# In[101]:
+# In[5]:
 
 
 # wildwinds.com/robots.txt requires a 30-second delay between requests
@@ -52,7 +52,7 @@ print(f'First five: {linkroots[:5]} \nLast five: {linkroots[-5:]} \n{len(linkroo
 
 # ### Create a semi-random list of test pages for building an adaptable parser
 
-# In[102]:
+# In[6]:
 
 
 test_ids = random.choices(range(len(linkroots)), k=10) # 10 random index numbers
@@ -63,7 +63,7 @@ for root in test_roots:
 
 # ### pull html from test pages
 
-# In[103]:
+# In[7]:
 
 
 # Define function that scrapes indicated pages with 30-second delay between requests
@@ -83,7 +83,7 @@ def scrape(url_roots: list[str]):
     return combined_pages_html
 
 
-# In[104]:
+# In[8]:
 
 
 # Scrape test pages' html (this takes some time with the delay)
@@ -92,14 +92,14 @@ test_pages = scrape(test_roots)
 
 # ### Inspect test page html
 
-# In[105]:
+# In[9]:
 
 
 # Convert page html into easier-to-manipulate format using BeautifulSoup
 test_soups = [BeautifulSoup(page.content, 'lxml') for page in test_pages]
 
 
-# In[106]:
+# In[10]:
 
 
 print(f'Test soup preview: \n\n{str(test_soups[5])[:2000]}')
@@ -107,7 +107,7 @@ print(f'Test soup preview: \n\n{str(test_soups[5])[:2000]}')
 
 # ### Create helper functions for parsing data fields
 
-# In[107]:
+# In[11]:
 
 
 # Define function for parsing names of coin subjects
@@ -119,7 +119,7 @@ def pull_title(soup):
     return raw_title[:sep_index].strip() if sep_index != -1 else raw_title.strip()
 
 
-# In[108]:
+# In[12]:
 
 
 # Function to test pull_title()
@@ -129,13 +129,13 @@ def test_pull_title(soups):
     pp.pprint(titles.tolist())
 
 
-# In[109]:
+# In[13]:
 
 
 test_pull_title(test_soups)
 
 
-# In[110]:
+# In[14]:
 
 
 # Function to pull subtitles
@@ -163,7 +163,7 @@ def pull_subtitle(soup):
     return None
 
 
-# In[111]:
+# In[15]:
 
 
 # Function to test pull_subtitle()
@@ -173,13 +173,13 @@ def test_pull_subtitle(soups):
     pp.pprint(subtitles.tolist()) 
 
 
-# In[112]:
+# In[16]:
 
 
 test_pull_subtitle(test_soups)
 
 
-# In[113]:
+# In[17]:
 
 
 # Function to pull raw coin data
@@ -188,16 +188,45 @@ def pull_coins(soup):
     return coins
 
 
-# In[114]:
+# In[32]:
 
 
 # Test pull_coins
-test_coins = pull_coins(test_soups[1])
+test_coins = pull_coins(test_soups[3])
 print(f'{len(test_coins)} test coins. Raw data:\n')
 pp.pprint(test_coins[:5])
 
 
-# ### Helper functions to parse useful data features
+# In[30]:
+
+
+# Function to pull coin descriptions
+def coin_description(coin):
+    try:
+        description_html = str(coin[1])
+        match = re.search(r'<td[^>]*>([^<]+)</td>', description_html)
+        if match:
+            description = match.group(1)  # The captured group from the regex
+            return description.strip()
+    except IndexError:
+        return None
+
+
+# In[21]:
+
+
+# Function to test coin_description()
+def test_coin_description(coins):
+    descriptions = pd.Series([coin_description(coin) for coin in coins])
+    print(f'Out of {len(coins)} coins, {descriptions.isna().sum()} are missing description value(s)')
+    pp.pprint(descriptions.tolist())
+
+
+# In[31]:
+
+
+test_coin_description(test_coins)
+
 
 # In[115]:
 
@@ -458,6 +487,8 @@ def coin_tests(soups=test_soups):
         for c in pull_coins(s):
             test_coins.append(c)
     print(f'Out of {len(test_coins)} coins in {len(soups)} soups, there are:')
+    descriptions = pd.Series([coin_description(coin) for coin in test_coins])
+    print(f'  {descriptions.isna().sum()} missing description values')
     metals = pd.Series([coin_metal(coin) for coin in test_coins])
     print(f'  {metals.isna().sum()} missing metal values')
     print(f'    {metals.nunique()} unique metal values: {metals.unique()}')
@@ -485,15 +516,17 @@ def coin_tests(soups=test_soups):
 coin_tests()
 
 
-# In[137]:
+# In[33]:
 
 
 # Function that combines previous helper functions to return coin DataFrame
 def coin_df(soup):
     title = pull_title(soup)
-    id, metal, mass, diameter, era, year, inscriptions, jpg, txt = [], [], [], [], [], [], [], [], []
+    subtitle = pull_subtitle(soup)
+    id, description, metal, mass, diameter, era, year, inscriptions, jpg, txt = [], [], [], [], [], [], [], [], [], []
     for coin in pull_coins(soup):
         id.append(coin_id(coin))
+        description.append(coin_description(coin))
         metal.append(coin_metal(coin))
         mass.append(coin_mass(coin))
         diameter.append(coin_diameter(coin))
@@ -501,8 +534,8 @@ def coin_df(soup):
         year.append(coin_year(coin))
         inscriptions.append(coin_inscriptions(coin))
         txt.append(coin_txt(coin))
-    return pd.DataFrame({'title':title, 'id':id, 'metal':metal, 'mass':mass, 'diameter':diameter, \
-                         'era':era, 'year':year, 'inscriptions':inscriptions, 'txt':txt})
+    return pd.DataFrame({'title':title, 'subtitle':subtitle, 'id':id, 'description':description, 'metal':metal, 'mass':mass, \
+                        'diameter':diameter, 'era':era, 'year':year, 'inscriptions':inscriptions, 'txt':txt})
 
 
 # In[138]:
@@ -579,7 +612,7 @@ roman_coins_raw.info()
 roman_coins_raw.describe()
 
 
-# In[163]:
+# In[1]:
 
 
 roman_coins = roman_coins_raw.drop_duplicates(subset=['id'], keep='first')
