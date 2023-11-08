@@ -1,11 +1,9 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# ### Import libraries
+# Import libraries
 
-# In[2]:
-
-
+import numpy as np
 import pandas as pd
 import random
 from time import sleep
@@ -419,6 +417,8 @@ metal_categories = ['None', 'FAKE', 'Brass', 'Copper', 'Silver', 'Gold']
 roman_coins['metal'] = pd.Categorical(roman_coins['metal'], categories=metal_categories, ordered=True)
 era_categories = ['None', 'BC', 'AD']
 roman_coins['era'] = pd.Categorical(roman_coins['era'], categories=era_categories, ordered=True)
+
+roman_coins.replace([np.inf, -np.inf, np.nan], None, inplace=True)
 
 # Export roman_coins DataFrame as csv
 roman_coins.to_csv('roman_coins.csv', index=False)
