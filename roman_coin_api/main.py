@@ -4,7 +4,7 @@ from fastapi import FastAPI, Query
 
 app = FastAPI()
 
-df = pd.read_csv('/home/vbalalian/RomanCoins/web_scraping/roman_coins.csv')
+df = pd.read_csv('./web_scraping/roman_coins.csv')
 
 @app.get('/')
 async def root():
