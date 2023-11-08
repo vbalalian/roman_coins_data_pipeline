@@ -1,11 +1,10 @@
 import pandas as pd
 import numpy as np
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 
 app = FastAPI()
 
 df = pd.read_csv('/home/vbalalian/RomanCoins/web_scraping/roman_coins.csv')
-df.replace([np.inf, -np.inf, np.nan], None, inplace=True) # Handle missing values
 
 @app.get('/')
 async def root():
@@ -49,7 +48,7 @@ async def read_coins(
     return data.iloc[start:end].to_dict(orient='records')
 
 @app.get('/coins/search')
-async def search_coins(query: str = None):
+async def search_coins(query: str | None = Query(default=None, max_length=50)):
     if query:
         search_result = df[df['description'].str.contains(query, na=False)]
         return search_result.to_dict(orient='records')
