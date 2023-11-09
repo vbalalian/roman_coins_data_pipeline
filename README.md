@@ -8,4 +8,5 @@ Extracting, Loading, and Transforming data on Roman Coins gathered from wildwind
 wildwinds.com, written in html, has extensive data on ancient coins organized into various periods. Much of the data is mixed among string descriptions. This webscraper scrapes data from the website section dedicated to coins from of the Roman Empire, which are contained on separate pages for each emperor/figurehead.
 
 ### [API](roman_coin_api/main.py)
-**Tools:** FastAPI  
+**Tools:** FastAPI, SQLite  
+**Skills:** SQL, APIs
