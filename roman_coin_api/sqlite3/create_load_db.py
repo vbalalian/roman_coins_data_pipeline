@@ -1,8 +1,8 @@
 import sqlite3
 import csv
 
-db_path = './sqlite3/roman_coins.db'
-csv_path = '../web_scraping/roman_coins.csv'
+db_path = 'roman_coin_api/sqlite3/roman_coins.db'
+csv_path = 'web_scraping/roman_coins.csv'
 
 try:
     with sqlite3.connect(db_path) as con:
@@ -31,4 +31,6 @@ try:
 except sqlite3.Error as e:
     print("SQLite error:", e)
 
-con.close()
+finally:
+    if con:
+        con.close()
