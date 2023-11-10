@@ -1,10 +1,14 @@
-import pandas as pd
-import numpy as np
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, HTTPException
+import sqlite3
+
+db_path = 'roman_coin_api/sqlite3/roman_coins.db'
 
 app = FastAPI()
 
-df = pd.read_csv('./web_scraping/roman_coins.csv')
+def connect_db():
+    con = sqlite3.connect(db_path)
+    con.row_factory = sqlite3.Row
+    return con
 
 @app.get('/')
 async def root():
@@ -28,35 +32,68 @@ async def read_coins(
     metal: str = None,
     era: str = None,
     year: str = None
-
     ):
 
-    start = (page - 1) * page_size
-    end = start + page_size
-    data = df
+    with connect_db() as con:
+        cur = con.cursor()
 
-    if ruler:
-        data = data[data['ruler'] == ruler]
-    if metal:
-        data = data[data['metal'] == metal]
-    if era:
-        data = data[data['era'] == era]
-    if year:
-        data = data[data['year'].astype(str) == year]
-    if sort_by:
-        data = data.sort_values(by=sort_by)
-    return data.iloc[start:end].to_dict(orient='records')
+        # Base query
+        query = 'SELECT * FROM roman_coins'
+        params = []
+
+        # Filtering logic
+        conditions = []
+        if ruler:
+            conditions.append('ruler = ?')
+            params.append(ruler)
+        if metal:
+            conditions.append('metal = ?')
+            params.append(metal)
+        if era:
+            conditions.append('era = ?')
+            params.append(era)
+        if year:
+            conditions.append('year = ?')
+            params.append(year)
+        if conditions:
+            query += ' WHERE ' + ' AND '.join(conditions)
+        
+        # Sorting logic
+        if sort_by:
+            query += f' ORDER BY {sort_by}'
+
+        # Pagination logic
+        query += ' LIMIT ? OFFSET ?'
+        params += [page_size, (page - 1) * page_size]
+
+        # Execute query
+        cur.execute(query, params)
+        coins = cur.fetchall()
+
+    con.close()
+    return [dict(row) for row in coins]
 
 @app.get('/coins/search')
-async def search_coins(query: str | None = Query(default=None, max_length=50)):
+async def search_coins(query: str | None = Query(default=None, min_length=1, max_length=50)):
+
     if query:
-        search_result = df[df['description'].str.contains(query, na=False)]
-        return search_result.to_dict(orient='records')
-    return {'error': 'Query string is empty'}
+        with connect_db() as con:
+            cur = con.cursor()
+            cur.execute('SELECT * FROM roman_coins WHERE description LIKE ?', ('%' + query + '%',))
+            search_result = cur.fetchall()
+        con.close()
+        return [dict(row) for row in search_result]
+    
+    raise HTTPException(status_code=400, detail='Query string is empty')
 
 @app.get('/coins/id/{coin_id}')
 async def read_coin(coin_id: str):
-    coin = df[df['id'] == coin_id]
-    if coin.empty:
-        return {'error': 'Coin not found'}
-    return coin.iloc[0].to_dict()
+
+    with sqlite3.connect(db_path) as con:
+        cur = con.cursor()
+        cur.execute('SELECT * FROM roman_coins WHERE id = ?', (coin_id,))
+        coin = cur.fetchone()
+    con.close()
+    if coin is None:
+        raise HTTPException(status_code=404, detail='Coin not found')
+    return dict(coin)
