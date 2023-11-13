@@ -28,11 +28,14 @@ def scrape(url_roots: list[str], delay: int = 30):
 # Create helper functions for parsing data fields
 # Function for parsing names of coin subjects
 def pull_title(soup):
-    raw_title = soup.find('title').text
-    sep_index = raw_title.find(',')
-    if sep_index == -1:
-        sep_index = raw_title.find('-')
-    return raw_title[:sep_index].strip() if sep_index != -1 else raw_title.strip()
+    raw_title = soup.find('title')
+    if raw_title:
+        title_text = raw_title.text
+        sep_index = title_text.find(',')
+        if sep_index == -1:
+            sep_index = title_text.find('-')
+        return title_text[:sep_index].strip() if sep_index != -1 else title_text.strip()
+    return None
 
 # Function to pull subtitles
 def pull_subtitle(soup):
