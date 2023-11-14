@@ -67,103 +67,54 @@ def test_pull_subtitle():
         <html><body><h2>Test Ruler</h2><p>Browse the Test Page</p></body></html>'''
     assert pull_subtitle(BeautifulSoup(navigation_text_html, 'html.parser')) is None
 
-"""
-# Test pull_coins
-test_coins = pull_coins(test_soups[3])
-print(f'{len(test_coins)} test coins. Raw data:\n')
-pp.pprint(test_coins[:5])
+# Normal html and soup
+normal_html = '''<html><body><br/><enter><p></p><h2></h2><p><br/></p><h3></h3>
+<table><tr><td bgcolor="#B7A642">TEST 123</td><td>Test Description 1</td><th>
+<a href="TEST_123.txt">Text</a></th><td><a href="TEST_123.jpg">Image</a></td>
+</tr><tr><td bgcolor="#B7A642">TEST 124</td><td>Test Description 2</td><th>
+<a href="TEST_124.txt">Text</a></th><td><a href="TEST_124.jpg">Image</a></td>
+</tr><tr><td bgcolor="#B7A642">TEST 125</td><td>Test Description 3</td><th>
+<a href="TEST_125.txt">Text</a></th><td><a href="TEST_125.jpg">Image</a></td>
+</tr></a></td></tr><tr><td></td></tr><tr><td></body></html>'''
+normal_soup = BeautifulSoup(normal_html, 'html.parser')
 
+def test_pull_coins():
+    # Normal case
+    normal_coins = pull_coins(normal_soup)
+    assert len(normal_coins) == 3
 
-# Function to test coin_description()
-def test_coin_description(coins):
-    descriptions = pd.Series([coin_description(coin) for coin in coins])
-    print(f'Out of {len(coins)} coins, {descriptions.isna().sum()} are missing description value(s)')
-    pp.pprint(descriptions.tolist()[:10])
+    # Case with missing coins
+    missing_coins_html = '''<html><body><br/><enter><p></p><h2></h2><p><br/></
+    p><h3></h3><table<tr><td></td></tr><tr><td></body></html>'''
+    missing_coins_soup = BeautifulSoup(missing_coins_html, 'html.parser')
+    missing_coins = pull_coins(missing_coins_soup)
+    assert len(missing_coins) == 0
 
+def test_coin_id():
+    # Normal case
+    normal_coins = [coin.contents for coin in normal_soup.find_all('tr') 
+                if len(coin) >2 and 'bgcolor' in str(coin)]
+    
+    assert coin_id(normal_coins[0]) == 'TEST 123'
+    assert coin_id(normal_coins[1]) == 'TEST 124'
+    assert coin_id(normal_coins[2]) == 'TEST 125'
 
-# Function to test previous function coin_metal()
-def test_coin_metal(coins):
-    metals = pd.Series([coin_metal(coin) for coin in coins])
-    print(f'Out of {len(coins)} coins, {metals.isna().sum()} are missing metal value(s)')
-    pp.pprint(metals.tolist()[:25])
+    # Case with missing id
+    missing_id_html = '''<html><body><br/><enter><p></p><h2></h2><p><br/></p><
+    h3></h3><table><tr><td>Test Description1</td><th><a href="TEST_123.txt">Te
+    xt</a></th><td><a href="TEST_123.jpg">Image</a></td></tr><tr><td></td></tr
+    ><tr><td></body></html>'''
+    missing_id_soup = BeautifulSoup(missing_id_html, 'html.parser')
+    missing_id_coin = [coin.contents[0] for coin in missing_id_soup.find_all('tr') 
+                       if len(coin) >2 and 'bgcolor' in str(coin)]
+    assert coin_id(missing_id_coin) is None
 
+def test_coin_description():
+    # Normal case
+    normal_coins = [coin.contents for coin in normal_soup.find_all('tr') 
+            if len(coin) >2 and 'bgcolor' in str(coin)]
+    assert coin_description(normal_coins[0]) == 'Test Description 1'
+    assert coin_description(normal_coins[1]) == 'Test Description 2'
+    assert coin_description(normal_coins[2]) == 'Test Description 3'
 
-# Function to test coin_era() and coin_year()
-def test_coin_era_and_year(coins):
-    eras = [coin_era(coin) for coin in coins]
-    years = [coin_year(coin) for coin in coins]
-    df = pd.DataFrame({'eras':eras, 'years':years})
-    print(f'Out of {len(coins)} coins:')
-    print(f'{df.eras.isna().sum()} are missing era value(s).')
-    print(f'{df.years.isna().sum()} are missing year value(s).')
-    pp.pprint(eras[:25])
-    pp.pprint(years[:25])
-
-
-# Function to test previous function coin_metal()
-def test_coin_txt(coins):
-    txt = pd.Series([coin_txt(coin) for coin in coins])
-    print(f'Out of {len(coins)} coins, {txt.isna().sum()} are missing .txt value(s)')
-    pp.pprint(txt.tolist()[:25])
-
-
-# Function to test previous function coin_id()
-def test_coin_id(coins):
-    id = pd.Series([coin_id(coin) for coin in coins])
-    print(f'Out of {len(coins)} coins, {id.isna().sum()} are missing id value(s)')
-    pp.pprint(id.tolist()[:25])
-
-
-
-# Function to test coin_mass()
-def test_coin_mass(coins):
-    mass = pd.Series([coin_mass(coin) for coin in coins])
-    print(f'Out of {len(coins)} coins, {mass.isna().sum()} are missing mass value(s)')
-    pp.pprint(mass.tolist()[:25])
-
-# Function to test coin_diameter()
-def test_coin_diameter(coins):
-    diameter = pd.Series([coin_diameter(coin) for coin in coins])
-    print(f'Out of {len(coins)} coins, {diameter.isna().sum()} are missing diameter value(s)')
-    pp.pprint(diameter.tolist()[:25])
-
-
-def test_coin_inscriptions(coins):
-    inscriptions = pd.Series([coin_inscriptions(coin) for coin in coins])
-    print(f'Out of {len(coins)} coins, {inscriptions.isna().sum()} are missing inscriptions value(s)')
-    pp.pprint(inscriptions.tolist()[:25])
-
-
-# Combine helper functions for a basic summary of function success
-def coin_tests(soups=test_soups):
-    test_coins = []
-    for s in soups:
-        for c in pull_coins(s):
-            test_coins.append(c)
-    print(f'Out of {len(test_coins)} coins in {len(soups)} soups, there are:')
-    descriptions = pd.Series([coin_description(coin) for coin in test_coins])
-    print(f'  {descriptions.isna().sum()} missing description values')
-    metals = pd.Series([coin_metal(coin) for coin in test_coins])
-    print(f'  {metals.isna().sum()} missing metal values')
-    print(f'    {metals.nunique()} unique metal values: {metals.unique()}')
-    years = pd.Series([coin_year(coin) for coin in test_coins])
-    print(f'  {years.isna().sum()} missing year values')
-    print(f'    {years.nunique()} unique year values')
-    print(f'      Mean: {years.mean()}, Median: {years.median()}, Min: {years.min()}, Max: {years.max()}')
-    ids = pd.Series([coin_id(coin) for coin in test_coins])
-    print(f'  {ids.isna().sum()} missing id values')
-    print(f'    {ids.nunique()} unique id values')
-    mass = pd.Series([coin_mass(coin) for coin in test_coins])
-    print(f'  {mass.isna().sum()} missing mass values')
-    print(f'    {mass.nunique()} unique mass values')
-    print(f'      Mean: {mass.mean()}, Median: {mass.median()}, Min: {mass.min()}, Max: {mass.max()}')
-    diameter = pd.Series([coin_diameter(coin) for coin in test_coins])
-    print(f'  {diameter.isna().sum()} missing diameter values')
-    print(f'    {diameter.nunique()} unique diameter values')
-    print(f'      Mean: {diameter.mean()}, Median: {diameter.median()}, Min: {diameter.min()}, Max: {diameter.max()}')
-    inscriptions = [coin_inscriptions(c) for c in test_coins]
-    print(f'  {pd.Series(inscriptions).isna().sum()} missing inscriptions values')
-    unique_inscriptions = list(set([item for inscription in inscriptions if inscription is not None for item in inscription]))
-    print(f'    {len(unique_inscriptions)} unique inscriptions')
-    print(f'      {unique_inscriptions}')
-"""
+    # Case with missing description
