@@ -69,14 +69,16 @@ def test_pull_subtitle():
 
 # Normal html and soup
 normal_html = '''<html><body><br/><enter><p></p><h2></h2><p><br/></p><h3></h3>
-<table><tr><td bgcolor="#B7A642">TEST 123</td><td>Test Description 1</td><th>
+<table><tr><td bgcolor="#b87333">TEST 123</td><td>Test Description 1</td><th>
 <a href="TEST_123.txt">Text</a></th><td><a href="TEST_123.jpg">Image</a></td>
-</tr><tr><td bgcolor="#B7A642">TEST 124</td><td>Test Description 2</td><th>
+</tr><tr><td bgcolor="#C0C0C0">TEST 124</td><td>Test Description 2</td><th>
 <a href="TEST_124.txt">Text</a></th><td><a href="TEST_124.jpg">Image</a></td>
-</tr><tr><td bgcolor="#B7A642">TEST 125</td><td>Test Description 3</td><th>
+</tr><tr><td bgcolor="#FFD700">TEST 125</td><td>Test Description 3</td><th>
 <a href="TEST_125.txt">Text</a></th><td><a href="TEST_125.jpg">Image</a></td>
 </tr></a></td></tr><tr><td></td></tr><tr><td></body></html>'''
 normal_soup = BeautifulSoup(normal_html, 'html.parser')
+normal_coins = [coin.contents for coin in normal_soup.find_all('tr') 
+                if len(coin) >2 and 'bgcolor' in str(coin)]
 
 def test_pull_coins():
     # Normal case
@@ -84,26 +86,23 @@ def test_pull_coins():
     assert len(normal_coins) == 3
 
     # Case with missing coins
-    missing_coins_html = '''<html><body><br/><enter><p></p><h2></h2><p><br/></
-    p><h3></h3><table<tr><td></td></tr><tr><td></body></html>'''
+    missing_coins_html = '''<html><body><br/><enter><p></p><h2></h2><p><br/>
+    </p><h3></h3><table<tr><td></td></tr><tr><td></body></html>'''
     missing_coins_soup = BeautifulSoup(missing_coins_html, 'html.parser')
     missing_coins = pull_coins(missing_coins_soup)
     assert len(missing_coins) == 0
 
 def test_coin_id():
     # Normal case
-    normal_coins = [coin.contents for coin in normal_soup.find_all('tr') 
-                if len(coin) >2 and 'bgcolor' in str(coin)]
-    
     assert coin_id(normal_coins[0]) == 'TEST 123'
     assert coin_id(normal_coins[1]) == 'TEST 124'
     assert coin_id(normal_coins[2]) == 'TEST 125'
 
     # Case with missing id
-    missing_id_html = '''<html><body><br/><enter><p></p><h2></h2><p><br/></p><
-    h3></h3><table><tr><td>Test Description1</td><th><a href="TEST_123.txt">Te
-    xt</a></th><td><a href="TEST_123.jpg">Image</a></td></tr><tr><td></td></tr
-    ><tr><td></body></html>'''
+    missing_id_html = '''<html><body><br/><enter><p></p><h2></h2><p><br/></p>
+    <h3></h3><table><tr><td>Test Description1</td><th><a href="TEST_123.txt">
+    Text</a></th><td><a href="TEST_123.jpg">Image</a></td></tr><tr><td></td>
+    </tr><tr><td></body></html>'''
     missing_id_soup = BeautifulSoup(missing_id_html, 'html.parser')
     missing_id_coin = [coin.contents[0] for coin in missing_id_soup.find_all('tr') 
                        if len(coin) >2 and 'bgcolor' in str(coin)]
@@ -111,10 +110,34 @@ def test_coin_id():
 
 def test_coin_description():
     # Normal case
-    normal_coins = [coin.contents for coin in normal_soup.find_all('tr') 
-            if len(coin) >2 and 'bgcolor' in str(coin)]
     assert coin_description(normal_coins[0]) == 'Test Description 1'
     assert coin_description(normal_coins[1]) == 'Test Description 2'
     assert coin_description(normal_coins[2]) == 'Test Description 3'
 
     # Case with missing description
+    missing_desc_html = '''<html><body><table><tr><td bgcolor="#B7A642">
+    TEST 123</td><th><a href="TEST_123.txt">Text</a></th><td>
+    <a href="TEST_123.jpg">Image</a></td></tr></body></html>'''
+    missing_desc_soup = BeautifulSoup(missing_desc_html, 'html.parser')
+    missing_desc_coin = [
+        coin.contents[0] for coin in missing_desc_soup.find_all('tr') 
+        if len(coin) >2 and 'bgcolor' in str(coin)]
+    assert coin_description(missing_desc_coin) is None
+
+def test_coin_metal():
+    # Normal case
+    assert coin_metal(normal_coins[0]) == 'Copper'
+    assert coin_metal(normal_coins[1]) == 'Silver'
+    assert coin_metal(normal_coins[2]) == 'Gold'
+
+    # Case with missing metal
+    missing_metal_html = '''<html><body><table><tr><td>TEST 123</td><td>
+    Test Description1</td><th><a href="TEST_123.txt">Text</a></th><td>
+    <a href="TEST_123.jpg">Image</a></td></tr></body></html>'''
+    missing_metal_soup = BeautifulSoup(missing_metal_html, 'html.parser')
+    missing_metal_coin = [
+        coin.contents[0] for coin in missing_metal_soup.find_all('tr') 
+        if len(coin) >2 and 'bgcolor' in str(coin)]
+    assert coin_metal(missing_metal_coin) is None
+    
+#def test_coin_era():
