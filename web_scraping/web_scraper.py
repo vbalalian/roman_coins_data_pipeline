@@ -77,14 +77,21 @@ def pull_coins(soup):
     coins = [coin.contents for coin in soup.find_all('tr') if len(coin) >2 and 'bgcolor' in str(coin)]
     return coins
 
+# Function to pull coin ids
+def coin_id(coin):
+    try:
+        id_html = coin[0]
+        id = id_html.get_text()
+        return id
+    except IndexError:
+        return None
+
 # Function to pull coin descriptions
 def coin_description(coin):
     try:
-        description_html = str(coin[1])
-        match = re.search(r'<td[^>]*>([^<]+)</td>', description_html)
-        if match:
-            description = match.group(1)  # The captured group from the regex
-            return description.strip()
+        description_html = coin[1]
+        description = description_html.get_text()
+        return description
     except IndexError:
         return None
 
@@ -135,13 +142,6 @@ def coin_txt(coin):
         match = re.search(r'href="([^"]+\.txt)"', str(item))
         if match:
             return match.group(1)
-
-# Function to pull coin ids from jpg or txt urls
-def coin_id(coin):
-    coin = str(coin)
-    match = re.search(r'href="_*([^"]+?)\.(jpg|txt)"', coin)
-    if match:
-        return match.group(1)
 
 # Function to pull coin mass (in grams)
 def coin_mass(coin):
