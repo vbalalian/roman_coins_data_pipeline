@@ -4,7 +4,9 @@ beautifulsoup4==4.12.2
 requests==2.31.0
 fastapi==0.104.1
 uvicorn[standard]==0.23.2
-jupyter
-matplotlib
-seaborn
-lxml
+pytest==7.4.3
+coverage==7.3.2
+jupyter==1.0.0
+matplotlib==3.8.1
+seaborn==0.13.0
+lxml==4.9.3

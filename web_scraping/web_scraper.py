@@ -18,7 +18,8 @@ def scrape(url_roots: list[str], delay: int = 30):
         message = f'requesting {url} ({url_roots.index(root) + 1}/{len(url_roots)})'
         max_length = max(max_length, len(message))
         print(f'\r{message.ljust(max_length)}', end=' ', flush=True)
-        sleep(delay) # Delay between requests (wildwinds.com requires 30-seconds)
+        if root != url_roots[0]:
+            sleep(delay)
         page_html = requests.get(url)
         combined_pages_html.append(page_html)
     # After the loop, print a final message that clears the last line
@@ -28,34 +29,47 @@ def scrape(url_roots: list[str], delay: int = 30):
 # Create helper functions for parsing data fields
 # Function for parsing names of coin subjects
 def pull_title(soup):
-    raw_title = soup.find('title').text
-    sep_index = raw_title.find(',')
-    if sep_index == -1:
-        sep_index = raw_title.find('-')
-    return raw_title[:sep_index].strip() if sep_index != -1 else raw_title.strip()
+    raw_title = soup.find('title')
+    if raw_title:
+        title_text = raw_title.text
+        sep_index = title_text.find(',')
+        if sep_index == -1:
+            sep_index = title_text.find('-')
+        return title_text[:sep_index].strip() if sep_index != -1 else title_text.strip()
+    return None
 
-# Function to pull subtitles
 def pull_subtitle(soup):
-    possible_locations = [
-        lambda s: s.find_all('h3')[0].contents[-1],
-        lambda s: s.find('font').contents[0],
-        lambda s: s.find_all('p')[1].contents[-1],
-        lambda s: s.find_all('br')[0].contents[0],
-    ]
-    
-    for get_subtitle in possible_locations:
-        try:
-            subtitle = get_subtitle(soup)
-            if not subtitle or len(str(subtitle)) < 4:
-                continue
-            if any(keyword in str(subtitle) for keyword in ['Click', 'Browse']):
-                continue
-            if '(' in str(subtitle) or '<' in str(subtitle):
-                return None
-            return str(subtitle).strip()
-        except (IndexError, AttributeError):
-            continue 
-    
+    # Filter function to exclude unwanted text
+    def valid_subtitle(text):
+        if not text or len(text) < 4:
+            return False
+        unwanted_phrases = ['Click', 'Browse', 'Main Page', 'RPC', 'RIC', 'Sear', 
+                            'NOTE:', 'Note:', 'NOW', 'NEW', 'example', 'examples', 
+                            'RSC']
+        if any(phrase in text for phrase in unwanted_phrases):
+            return False
+        return True
+
+    # Check directly after <h2> tags
+    h2_subtitle = soup.find('h2')
+    if h2_subtitle and h2_subtitle.next_sibling and h2_subtitle.next_sibling.string:
+        subtitle = h2_subtitle.next_sibling.string.strip()
+        if valid_subtitle(subtitle):
+            return subtitle
+
+    # Check within <p> tags for subtitles
+    for p_tag in soup.find_all('p'):
+        p_text = p_tag.get_text(strip=True)
+        if valid_subtitle(p_text):
+            return p_text
+
+    # Fallback: Check within <font> tags
+    font_tag = soup.find('font')
+    if font_tag:
+        font_text = font_tag.get_text(strip=True)
+        if valid_subtitle(font_text):
+            return font_text
+
     return None
 
 # Function to pull raw coin data
@@ -63,14 +77,21 @@ def pull_coins(soup):
     coins = [coin.contents for coin in soup.find_all('tr') if len(coin) >2 and 'bgcolor' in str(coin)]
     return coins
 
+# Function to pull coin ids
+def coin_id(coin):
+    try:
+        id_html = coin[0]
+        id = id_html.get_text()
+        return id
+    except IndexError:
+        return None
+
 # Function to pull coin descriptions
 def coin_description(coin):
     try:
-        description_html = str(coin[1])
-        match = re.search(r'<td[^>]*>([^<]+)</td>', description_html)
-        if match:
-            description = match.group(1)  # The captured group from the regex
-            return description.strip()
+        description_html = coin[1]
+        description = description_html.get_text()
+        return description
     except IndexError:
         return None
 
@@ -121,13 +142,6 @@ def coin_txt(coin):
         match = re.search(r'href="([^"]+\.txt)"', str(item))
         if match:
             return match.group(1)
-
-# Function to pull coin ids from jpg or txt urls
-def coin_id(coin):
-    coin = str(coin)
-    match = re.search(r'href="_*([^"]+?)\.(jpg|txt)"', coin)
-    if match:
-        return match.group(1)
 
 # Function to pull coin mass (in grams)
 def coin_mass(coin):
