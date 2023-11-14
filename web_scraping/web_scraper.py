@@ -97,15 +97,19 @@ def coin_description(coin):
 
 # Function to identify coin metal
 def coin_metal(coin):
-    metals = {'#B8':'Copper','#b8':'Copper', '#FF':'Gold', '#C0':'Silver', '#B7':'Brass', '#b7':'Brass', 'red':'FAKE'}
-    coin = str(coin)
+    metals = {
+        '#B87334':'Copper', '#B87333':'Copper', '#b87333':'Copper', 
+        '#FFD700':'Gold', '#ffd700':'Gold', '#FFD660':'Gold', '#FFC601':'Gold', 
+        '#C0C0C0':'Silver', '#c0C0C0':'Silver', '#c0c0c0':'Silver', '#cc9966':'Silver',
+        '#B7A642':'Bronze', '#b7a642':'Bronze', 
+        '#AC9B88':'Lead', 
+        '#FFF7A3':'Bone',
+        'red':'FAKE', '#F34629':'FAKE', '#FA6262':'FAKE', '#FF0000':'FAKE', '#FF4040':'FAKE', '#FA6036':'FAKE'}
     try:
-        bg_color_index = int(coin.find('bgcolor=')) + 9
-        bg_color = coin[bg_color_index:bg_color_index + 3]
-        metal = metals[bg_color]
+        color = list(coin[0].attrs.values())[0]
+        return metals[color]
     except:
         return None
-    return metal
 
 # Function to pull coin era (i.e. 'AD' or 'BC') 
 def coin_era(coin):
@@ -290,7 +294,7 @@ def main():
     roman_coins.replace([np.inf, -np.inf, np.nan], None, inplace=True)
 
     # Export roman_coins DataFrame as csv
-    roman_coins.to_csv('roman_coins.csv', index=False)
+    roman_coins.to_csv('web_scraping/roman_coins.csv', index=False)
 
 if __name__ == '__main__':
     main()
