@@ -5,3 +5,4 @@
 *.db
 *.pytest_cache
 *.pkl
+*.coverage
