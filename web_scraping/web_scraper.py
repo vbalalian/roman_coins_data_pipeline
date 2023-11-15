@@ -224,7 +224,7 @@ def coin_df(soup):
         era.append(coin_era(coin))
         year.append(coin_year(coin))
         inscriptions.append(coin_inscriptions(coin))
-        txt.append(coin_txt(coin))
+        txt.append('https://www.wildwinds.com/coins/ric/' + title.replace(' ', '_').lower() + '/' + coin_txt(coin))
     return pd.DataFrame({'ruler':title, 'ruler_detail':subtitle, 'id':id, 'description':description, 'metal':metal, 'mass':mass, \
                         'diameter':diameter, 'era':era, 'year':year, 'inscriptions':inscriptions, 'txt':txt})
 
