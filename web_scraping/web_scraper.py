@@ -113,32 +113,34 @@ def coin_metal(coin):
 
 # Function to pull coin era (i.e. 'AD' or 'BC') 
 def coin_era(coin):
-    match = re.search(r'\b(AD|BC)\b', str(coin))
+    description = coin_description(coin)
+    match = re.search(r'\b(AD|BC|A\.D\.|B\.C\.)\b', description)
     return match.group(0) if match else None
 
-# Function to pull a year (not *every* year) in the coin description
-# (if there is a range of years i.e. 117-124 AD, function pulls the year closest to era i.e. '117-124 AD' returns '124', while 'AD 117-124' returns '117')
+# Function to pull first year in the coin description
 def coin_year(coin):
-    era = coin_era(coin)
-    if not era:
-        return None
+    description = coin_description(coin)
+    # Extract years with mandatory era indicators and optional ranges or / patterns
+    year_matches = re.findall(r'\b(AD|BC|A\.D\.|B\.C\.)\s*(\d{1,3})(?:/(\d{' +
+                              r'1,3})|-(\d{1,3}))?\b|\b(\d{1,3})(?:/(\d{1,3' +
+                              r'})|-(\d{1,3}))?\s*(AD|BC|A\.D\.|B\.C\.)\b', 
+                              description)
 
-    if era == 'AD':
-        # Look for the year pattern before 'AD'
-        match = re.search(r'(\d{1,4})(?=\s*AD)', str(coin))
-    else:
-        # Look for the year pattern before 'BC'
-        match = re.search(r'(\d{1,4})(?=\s*BC)', str(coin))
+    valid_years = []
+    for match in year_matches:
+        era1, start_year1, end_year1_slash, end_year1_dash, start_year2, end_year2_slash, end_year2_dash, era2 = match
+        era = era1 or era2
+        start_year = int(start_year1 or start_year2)
+        end_year = int(end_year1_slash or end_year1_dash or end_year2_slash or end_year2_dash) if end_year1_slash or end_year1_dash or end_year2_slash or end_year2_dash else None
 
-    if not match:
-        # If no year is found before the era, search after it
-        match = re.search(r'(?<=\bAD\s)(\d{1,4})', str(coin)) if era == 'AD' else re.search(r'(?<=\bBC\s)(\d{1,4})', str(coin))
+        # Always select the first year in the match, regardless of era
+        year = start_year
 
-    if match:
-        year = int(match.group(0))
-        return year if era == 'AD' else -year
-    else:
-        return None
+        if year:
+            valid_years.append(year if era not in ['BC', 'B.C.'] else -year)
+
+    # Return the most relevant year (if multiple years are found)
+    return min(valid_years) if valid_years else None
 
 # Function to pull .txt urls
 def coin_txt(coin):
