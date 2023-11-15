@@ -1,7 +1,7 @@
 from web_scraping.web_scraper import (
-    scrape, pull_title, pull_subtitle, pull_coins, coin_description, 
-    coin_metal, coin_era, coin_year, coin_txt, coin_id, coin_mass, 
-    coin_diameter, coin_inscriptions, coin_df, combine_coin_dfs, main
+    scrape, pull_title, pull_subtitle, pull_coins, coin_id, coin_description, 
+    coin_metal, coin_era, coin_year, coin_txt, coin_mass, coin_diameter, 
+    coin_inscriptions, coin_df, combine_coin_dfs, main
 )
 from unittest.mock import patch, call, Mock
 from bs4 import BeautifulSoup
@@ -87,7 +87,7 @@ def test_pull_coins():
 
     # Case with missing coins
     missing_coins_html = '''<html><body><br/><enter><p></p><h2></h2><p><br/>
-    </p><h3></h3><table<tr><td></td></tr><tr><td></body></html>'''
+    </p><h3></h3><table><tr><td></td></tr><tr><td></body></html>'''
     missing_coins_soup = BeautifulSoup(missing_coins_html, 'html.parser')
     missing_coins = pull_coins(missing_coins_soup)
     assert len(missing_coins) == 0
@@ -100,9 +100,9 @@ def test_coin_id():
 
     # Case with missing id
     missing_id_html = '''<html><body><br/><enter><p></p><h2></h2><p><br/></p>
-    <h3></h3><table><tr><td>Test Description1</td><th><a href="TEST_123.txt">
-    Text</a></th><td><a href="TEST_123.jpg">Image</a></td></tr><tr><td></td>
-    </tr><tr><td></body></html>'''
+    <h3></h3><table><tr><td bgcolor="#b87333"></td><td>Test Description 1</td>
+    <th><a href="TEST_123.txt">Text</a></th><td><a href="TEST_123.jpg">Image
+    </a></td></tr><tr><td></td></tr><tr><td></body></html>'''
     missing_id_soup = BeautifulSoup(missing_id_html, 'html.parser')
     missing_id_coin = [coin.contents[0] for coin in missing_id_soup.find_all('tr') 
                        if len(coin) >2 and 'bgcolor' in str(coin)]
@@ -120,7 +120,7 @@ def test_coin_description():
     <a href="TEST_123.jpg">Image</a></td></tr></body></html>'''
     missing_desc_soup = BeautifulSoup(missing_desc_html, 'html.parser')
     missing_desc_coin = [
-        coin.contents[0] for coin in missing_desc_soup.find_all('tr') 
+        coin.contents for coin in missing_desc_soup.find_all('tr') 
         if len(coin) >2 and 'bgcolor' in str(coin)]
     assert coin_description(missing_desc_coin) is None
 
@@ -135,9 +135,46 @@ def test_coin_metal():
     Test Description1</td><th><a href="TEST_123.txt">Text</a></th><td>
     <a href="TEST_123.jpg">Image</a></td></tr></body></html>'''
     missing_metal_soup = BeautifulSoup(missing_metal_html, 'html.parser')
-    missing_metal_coin = [
-        coin.contents[0] for coin in missing_metal_soup.find_all('tr') 
-        if len(coin) >2 and 'bgcolor' in str(coin)]
-    assert coin_metal(missing_metal_coin) is None
+    missing_metal_coins = [coin.contents for coin in missing_metal_soup.find_all('tr') if len(coin) >2 and 'bgcolor' in str(coin)]
+    assert len(missing_metal_coins) == 0
     
-#def test_coin_era():
+def test_coin_era():
+    # Case with era 'AD'
+    era_AD_html = '''<html><body><br/><enter><p></p><h2></h2><p><br/></p><h3>
+    </h3><table><tr><td bgcolor="#b87333">TEST 123</td><td>Test AD 24-36 filler 
+    etc.</td><th><a href="TEST_123.txt">Text</a></th><td><a href="TEST_123.jpg">
+    Image</a></td></tr><tr><td></td></tr><tr><td></body></html>'''
+    era_AD_soup = BeautifulSoup(era_AD_html, 'html.parser')
+    era_AD_coins = [coin.contents for coin in era_AD_soup.find_all('tr') 
+                    if len(coin) >2 and 'bgcolor' in str(coin)]
+    assert coin_era(era_AD_coins[0]) == 'AD'
+    
+    # Case with era 'BC'
+    era_BC_html = '''<html><body><br/><enter><p></p><h2></h2><p><br/></p><h3>
+    </h3><table><tr><td bgcolor="#b87333">TEST 123</td><td>Test 248-297 BC filler 
+    etc.</td><th><a href="TEST_123.txt">Text</a></th><td><a href="TEST_123.jpg">
+    Image</a></td></tr><tr><td></td></tr><tr><td></body></html>'''
+    era_BC_soup = BeautifulSoup(era_BC_html, 'html.parser')
+    era_BC_coins = [coin.contents for coin in era_BC_soup.find_all('tr')
+                   if len(coin) >2 and 'bgcolor' in str(coin)]
+    assert coin_era(era_BC_coins[0]) == 'BC'
+
+    # Case with no era
+    missing_era_html = '''<html><body><br/><enter><p></p><h2></h2><p><br/></p><h3>
+    </h3><table><tr><td bgcolor="#b87333">TEST 123</td><td>Test 248-297 filler 
+    etc.</td><th><a href="TEST_123.txt">Text</a></th><td><a href="TEST_123.jpg">
+    Image</a></td></tr><tr><td></td></tr><tr><td></body></html>'''
+    missing_era_soup = BeautifulSoup(missing_era_html, 'html.parser')
+    missing_era_coin = [
+        coin.contents for coin in missing_era_soup.find_all('tr')
+        if len(coin) >2 and 'bgcolor' in str(coin)]
+    assert coin_era(missing_era_coin) is None
+
+# def test_coin_year():
+# def test_coin_txt():
+# def test_coin_mass():
+# def test_coin_diameter(): 
+# def test_coin_inscriptions():
+# def test_coin_df():
+# def test_combine_coin_dfs():
+# def test_main():
