@@ -82,7 +82,7 @@ def coin_id(coin):
     try:
         id_html = coin[0]
         id = id_html.get_text()
-        return id
+        return id if id else None
     except IndexError:
         return None
 
@@ -91,7 +91,7 @@ def coin_description(coin):
     try:
         description_html = coin[1]
         description = description_html.get_text()
-        return description
+        return description if len(description) > 15 else None
     except IndexError:
         return None
 
@@ -114,32 +114,36 @@ def coin_metal(coin):
 # Function to pull coin era (i.e. 'AD' or 'BC') 
 def coin_era(coin):
     description = coin_description(coin)
-    match = re.search(r'\b(AD|BC|A\.D\.|B\.C\.)\b', description)
-    return match.group(0) if match else None
+    try:
+        match = re.search(r'\b(AD|BC)\b', description)
+        return match.group(0)
+    except:
+        return None
 
 # Function to pull first year in the coin description
 def coin_year(coin):
     description = coin_description(coin)
-    # Extract years with mandatory era indicators and optional ranges or / patterns
-    year_matches = re.findall(r'\b(AD|BC|A\.D\.|B\.C\.)\s*(\d{1,3})(?:/(\d{' +
-                              r'1,3})|-(\d{1,3}))?\b|\b(\d{1,3})(?:/(\d{1,3' +
-                              r'})|-(\d{1,3}))?\s*(AD|BC|A\.D\.|B\.C\.)\b', 
-                              description)
+    try:
+        year_matches = re.findall(r'\b(AD|BC)\s*(\d{1,3})(?:/(\d{1,3})|-(\d' +
+                                  r'{1,3}))?\b|\b(\d{1,3})(?:/(\d{1,3})|-(' +
+                                  r'\d{1,3}))?\s*(AD|BC)\b', description)
+    except:
+        return None
 
     valid_years = []
     for match in year_matches:
         era1, start_year1, end_year1_slash, end_year1_dash, start_year2, end_year2_slash, end_year2_dash, era2 = match
         era = era1 or era2
         start_year = int(start_year1 or start_year2)
-        end_year = int(end_year1_slash or end_year1_dash or end_year2_slash or end_year2_dash) if end_year1_slash or end_year1_dash or end_year2_slash or end_year2_dash else None
+        end_year = int(end_year1_slash or end_year1_dash or end_year2_slash or 
+                       end_year2_dash) if end_year1_slash or end_year1_dash or \
+                        end_year2_slash or end_year2_dash else None
 
-        # Always select the first year in the match, regardless of era
         year = start_year
 
         if year:
             valid_years.append(year if era not in ['BC', 'B.C.'] else -year)
 
-    # Return the most relevant year (if multiple years are found)
     return min(valid_years) if valid_years else None
 
 # Function to pull .txt urls
