@@ -92,6 +92,12 @@ def test_pull_coins():
     missing_coins = pull_coins(missing_coins_soup)
     assert len(missing_coins) == 0
 
+# Helper function
+def coin_from_html(html):
+    soup = BeautifulSoup(html, 'html.parser')
+    coins = pull_coins(soup)
+    return coins[0]
+
 def test_coin_id():
     # Normal case
     assert coin_id(normal_coins[0]) == 'TEST 123'
@@ -103,9 +109,7 @@ def test_coin_id():
     <h3></h3><table><tr><td bgcolor="#b87333"></td><td>Test Description 1</td>
     <th><a href="TEST_123.txt">Text</a></th><td><a href="TEST_123.jpg">Image
     </a></td></tr><tr><td></td></tr><tr><td></body></html>'''
-    missing_id_soup = BeautifulSoup(missing_id_html, 'html.parser')
-    missing_id_coin = [coin.contents[0] for coin in missing_id_soup.find_all('tr') 
-                       if len(coin) >2 and 'bgcolor' in str(coin)]
+    missing_id_coin = coin_from_html(missing_id_html)
     assert coin_id(missing_id_coin) is None
 
 def test_coin_description():
@@ -118,10 +122,7 @@ def test_coin_description():
     missing_desc_html = '''<html><body><table><tr><td bgcolor="#B7A642">
     TEST 123</td><th><a href="TEST_123.txt">Text</a></th><td>
     <a href="TEST_123.jpg">Image</a></td></tr></body></html>'''
-    missing_desc_soup = BeautifulSoup(missing_desc_html, 'html.parser')
-    missing_desc_coin = [
-        coin.contents for coin in missing_desc_soup.find_all('tr') 
-        if len(coin) >2 and 'bgcolor' in str(coin)]
+    missing_desc_coin = coin_from_html(missing_desc_html)
     assert coin_description(missing_desc_coin) is None
 
 def test_coin_metal():
@@ -135,7 +136,7 @@ def test_coin_metal():
     Test Description1</td><th><a href="TEST_123.txt">Text</a></th><td>
     <a href="TEST_123.jpg">Image</a></td></tr></body></html>'''
     missing_metal_soup = BeautifulSoup(missing_metal_html, 'html.parser')
-    missing_metal_coins = [coin.contents for coin in missing_metal_soup.find_all('tr') if len(coin) >2 and 'bgcolor' in str(coin)]
+    missing_metal_coins = pull_coins(missing_metal_soup)
     assert len(missing_metal_coins) == 0
     
 def test_coin_era():
@@ -144,33 +145,58 @@ def test_coin_era():
     </h3><table><tr><td bgcolor="#b87333">TEST 123</td><td>Test AD 24-36 filler 
     etc.</td><th><a href="TEST_123.txt">Text</a></th><td><a href="TEST_123.jpg">
     Image</a></td></tr><tr><td></td></tr><tr><td></body></html>'''
-    era_AD_soup = BeautifulSoup(era_AD_html, 'html.parser')
-    era_AD_coins = [coin.contents for coin in era_AD_soup.find_all('tr') 
-                    if len(coin) >2 and 'bgcolor' in str(coin)]
-    assert coin_era(era_AD_coins[0]) == 'AD'
+    era_AD_coin = coin_from_html(era_AD_html)
+    assert coin_era(era_AD_coin) == 'AD'
     
     # Case with era 'BC'
     era_BC_html = '''<html><body><br/><enter><p></p><h2></h2><p><br/></p><h3>
     </h3><table><tr><td bgcolor="#b87333">TEST 123</td><td>Test 248-297 BC filler 
     etc.</td><th><a href="TEST_123.txt">Text</a></th><td><a href="TEST_123.jpg">
     Image</a></td></tr><tr><td></td></tr><tr><td></body></html>'''
-    era_BC_soup = BeautifulSoup(era_BC_html, 'html.parser')
-    era_BC_coins = [coin.contents for coin in era_BC_soup.find_all('tr')
-                   if len(coin) >2 and 'bgcolor' in str(coin)]
-    assert coin_era(era_BC_coins[0]) == 'BC'
+    era_BC_coin = coin_from_html(era_BC_html)
+    assert coin_era(era_BC_coin) == 'BC'
 
     # Case with no era
     missing_era_html = '''<html><body><br/><enter><p></p><h2></h2><p><br/></p><h3>
     </h3><table><tr><td bgcolor="#b87333">TEST 123</td><td>Test 248-297 filler 
     etc.</td><th><a href="TEST_123.txt">Text</a></th><td><a href="TEST_123.jpg">
     Image</a></td></tr><tr><td></td></tr><tr><td></body></html>'''
-    missing_era_soup = BeautifulSoup(missing_era_html, 'html.parser')
-    missing_era_coin = [
-        coin.contents for coin in missing_era_soup.find_all('tr')
-        if len(coin) >2 and 'bgcolor' in str(coin)]
+    missing_era_coin = coin_from_html(missing_era_html)
     assert coin_era(missing_era_coin) is None
 
-# def test_coin_year():
+def test_coin_year():
+    # Case with one year
+    single_year_html = '''<html><body><br/><enter><p></p><h2></h2><p><br/></p><h3>
+    </h3><table><tr><td bgcolor="#b87333">TEST 123</td><td>Test 24 AD filler 
+    etc.</td><th><a href="TEST_123.txt">Text</a></th><td><a href="TEST_123.jpg">
+    Image</a></td></tr><tr><td></td></tr><tr><td></body></html>'''
+    single_year_coin = coin_from_html(single_year_html)
+    assert coin_year(single_year_coin) == 24
+
+    # Case with multiple years
+    multi_years_html = '''<html><body><br/><enter><p></p><h2></h2><p><br/></p><h3>
+    </h3><table><tr><td bgcolor="#b87333">TEST 123</td><td>Test AD 248-297 filler 
+    etc.</td><th><a href="TEST_123.txt">Text</a></th><td><a href="TEST_123.jpg">
+    Image</a></td></tr><tr><td></td></tr><tr><td></body></html>'''
+    multi_years_coin = coin_from_html(multi_years_html)
+    assert coin_year(multi_years_coin) == 248
+
+    # Case with BC (negative) years
+    BC_years_html = '''<html><body><br/><enter><p></p><h2></h2><p><br/></p><h3>
+    </h3><table><tr><td bgcolor="#b87333">TEST 123</td><td>Test 49-36 BC filler 
+    etc.</td><th><a href="TEST_123.txt">Text</a></th><td><a href="TEST_123.jpg">
+    Image</a></td></tr><tr><td></td></tr><tr><td></body></html>'''
+    BC_years_coin = coin_from_html(BC_years_html)
+    assert coin_year(BC_years_coin) == -49
+
+    # Case with no years
+    no_years_html = '''<html><body><br/><enter><p></p><h2></h2><p><br/></p><h3>
+    </h3><table><tr><td bgcolor="#b87333">TEST 123</td><td>Test filler 
+    etc.</td><th><a href="TEST_123.txt">Text</a></th><td><a href="TEST_123.jpg">
+    Image</a></td></tr><tr><td></td></tr><tr><td></body></html>'''
+    no_years_coin = coin_from_html(no_years_html)
+    assert coin_year(no_years_coin) is None
+
 # def test_coin_txt():
 # def test_coin_mass():
 # def test_coin_diameter(): 
