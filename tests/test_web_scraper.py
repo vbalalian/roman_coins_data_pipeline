@@ -68,14 +68,13 @@ def test_pull_subtitle():
     assert pull_subtitle(BeautifulSoup(navigation_text_html, 'html.parser')) is None
 
 # Normal html and soup
-normal_html = '''<html><body><br/><enter><p></p><h2></h2><p><br/></p><h3></h3>
-<table><tr><td bgcolor="#b87333">TEST 123</td><td>Test Description 1</td><th>
-<a href="TEST_123.txt">Text</a></th><td><a href="TEST_123.jpg">Image</a></td>
-</tr><tr><td bgcolor="#C0C0C0">TEST 124</td><td>Test Description 2</td><th>
-<a href="TEST_124.txt">Text</a></th><td><a href="TEST_124.jpg">Image</a></td>
-</tr><tr><td bgcolor="#FFD700">TEST 125</td><td>Test Description 3</td><th>
-<a href="TEST_125.txt">Text</a></th><td><a href="TEST_125.jpg">Image</a></td>
-</tr></a></td></tr><tr><td></td></tr><tr><td></body></html>'''
+normal_html = '''<tr><td bgcolor="#b87333">TEST 123</td><td>Test Description 1
+</td><th><a href="TEST_123.txt">Text</a></th><td><a href="TEST_123.jpg">Image<
+/a></td></tr><tr><td bgcolor="#C0C0C0">TEST 124</td><td>Test Description 2</td
+><th><a href="TEST_124.txt">Text</a></th><td><a href="TEST_124.jpg">Image</a><
+/td></tr><tr><td bgcolor="#FFD700">TEST 125</td><td>Test Description 3</td><th
+><a href="125.txt">Text</a></th><td><a href="125.jpg">Image</a></td></tr>'''
+normal_html = normal_html.replace('\n', '')
 normal_soup = BeautifulSoup(normal_html, 'html.parser')
 normal_coins = [coin.contents for coin in normal_soup.find_all('tr') 
                 if len(coin) >2 and 'bgcolor' in str(coin)]
@@ -88,12 +87,14 @@ def test_pull_coins():
     # Case with missing coins
     missing_coins_html = '''<html><body><br/><enter><p></p><h2></h2><p><br/>
     </p><h3></h3><table><tr><td></td></tr><tr><td></body></html>'''
+    missing_coins_html = missing_coins_html.replace('\n', '')
     missing_coins_soup = BeautifulSoup(missing_coins_html, 'html.parser')
     missing_coins = pull_coins(missing_coins_soup)
     assert len(missing_coins) == 0
 
 # Helper function
 def coin_from_html(html):
+    html = html.replace('\n', '')
     soup = BeautifulSoup(html, 'html.parser')
     coins = pull_coins(soup)
     return coins[0]
@@ -105,10 +106,8 @@ def test_coin_id():
     assert coin_id(normal_coins[2]) == 'TEST 125'
 
     # Case with missing id
-    missing_id_html = '''<html><body><br/><enter><p></p><h2></h2><p><br/></p>
-    <h3></h3><table><tr><td bgcolor="#b87333"></td><td>Test Description 1</td>
-    <th><a href="TEST_123.txt">Text</a></th><td><a href="TEST_123.jpg">Image
-    </a></td></tr><tr><td></td></tr><tr><td></body></html>'''
+    missing_id_html = '''<tr><td bgcolor="#b87333"></td><td>Test Desc</td><th>
+<a href="123.txt">Text</a></th><td><a href="123.jpg">Image</a></td></tr>'''
     missing_id_coin = coin_from_html(missing_id_html)
     assert coin_id(missing_id_coin) is None
 
@@ -119,9 +118,8 @@ def test_coin_description():
     assert coin_description(normal_coins[2]) == 'Test Description 3'
 
     # Case with missing description
-    missing_desc_html = '''<html><body><table><tr><td bgcolor="#B7A642">
-    TEST 123</td><th><a href="TEST_123.txt">Text</a></th><td>
-    <a href="TEST_123.jpg">Image</a></td></tr></body></html>'''
+    missing_desc_html = '''<tr><td bgcolor="#B7A642">TEST 123</td><th><a href=
+"TEST_123.txt">Text</a></th><td><a href="TEST_123.jpg">Image</a></td></tr>'''
     missing_desc_coin = coin_from_html(missing_desc_html)
     assert coin_description(missing_desc_coin) is None
 
@@ -132,72 +130,106 @@ def test_coin_metal():
     assert coin_metal(normal_coins[2]) == 'Gold'
 
     # Case with missing metal
-    missing_metal_html = '''<html><body><table><tr><td>TEST 123</td><td>
-    Test Description1</td><th><a href="TEST_123.txt">Text</a></th><td>
-    <a href="TEST_123.jpg">Image</a></td></tr></body></html>'''
+    missing_metal_html = '''<tr><td>TEST 123</td><td>Test Desc</td><th><a href
+="TEST_123.txt">Text</a></th><td><a href="TEST_123.jpg">Image</a></td></tr>'''
     missing_metal_soup = BeautifulSoup(missing_metal_html, 'html.parser')
     missing_metal_coins = pull_coins(missing_metal_soup)
     assert len(missing_metal_coins) == 0
     
 def test_coin_era():
     # Case with era 'AD'
-    era_AD_html = '''<html><body><br/><enter><p></p><h2></h2><p><br/></p><h3>
-    </h3><table><tr><td bgcolor="#b87333">TEST 123</td><td>Test AD 24-36 filler 
-    etc.</td><th><a href="TEST_123.txt">Text</a></th><td><a href="TEST_123.jpg">
-    Image</a></td></tr><tr><td></td></tr><tr><td></body></html>'''
+    era_AD_html = '''<tr><td bgcolor="#b87333">TEST 123</td><td>Test AD 24-36 
+filler etc.</td><th><a href="TEST_123.txt">Text</a></th><td><a href="TEST_123
+.jpg">Image</a></td></tr>'''
     era_AD_coin = coin_from_html(era_AD_html)
     assert coin_era(era_AD_coin) == 'AD'
     
     # Case with era 'BC'
-    era_BC_html = '''<html><body><br/><enter><p></p><h2></h2><p><br/></p><h3>
-    </h3><table><tr><td bgcolor="#b87333">TEST 123</td><td>Test 248-297 BC filler 
-    etc.</td><th><a href="TEST_123.txt">Text</a></th><td><a href="TEST_123.jpg">
-    Image</a></td></tr><tr><td></td></tr><tr><td></body></html>'''
+    era_BC_html = '''<tr><td bgcolor="#b87333">TEST 123</td><td>Test 248-297 B
+C filler etc.</td><th><a href="TEST_123.txt">Text</a></th><td><a href="TEST_12
+3.jpg">Image</a></td></tr>'''
     era_BC_coin = coin_from_html(era_BC_html)
     assert coin_era(era_BC_coin) == 'BC'
 
     # Case with no era
-    missing_era_html = '''<html><body><br/><enter><p></p><h2></h2><p><br/></p><h3>
-    </h3><table><tr><td bgcolor="#b87333">TEST 123</td><td>Test 248-297 filler 
-    etc.</td><th><a href="TEST_123.txt">Text</a></th><td><a href="TEST_123.jpg">
-    Image</a></td></tr><tr><td></td></tr><tr><td></body></html>'''
+    missing_era_html = '''<tr><td bgcolor="#b87333">TEST 123</td><td>Test 248-
+297 filler etc.</td><th><a href="TEST_123.txt">Text</a></th><td><a href="TEST_
+123.jpg">Image</a></td></tr>'''
     missing_era_coin = coin_from_html(missing_era_html)
     assert coin_era(missing_era_coin) is None
 
 def test_coin_year():
     # Case with one year
-    single_year_html = '''<html><body><br/><enter><p></p><h2></h2><p><br/></p><h3>
-    </h3><table><tr><td bgcolor="#b87333">TEST 123</td><td>Test 24 AD filler 
-    etc.</td><th><a href="TEST_123.txt">Text</a></th><td><a href="TEST_123.jpg">
-    Image</a></td></tr><tr><td></td></tr><tr><td></body></html>'''
+    single_year_html = '''<tr><td bgcolor="#b87333">TEST 123</td><td>Test 24 A
+D filler etc.</td><th><a href="TEST_123.txt">Text</a></th><td><a href="TEST_12
+3.jpg">Image</a></td></tr>'''
     single_year_coin = coin_from_html(single_year_html)
     assert coin_year(single_year_coin) == 24
 
     # Case with multiple years
-    multi_years_html = '''<html><body><br/><enter><p></p><h2></h2><p><br/></p><h3>
-    </h3><table><tr><td bgcolor="#b87333">TEST 123</td><td>Test AD 248-297 filler 
-    etc.</td><th><a href="TEST_123.txt">Text</a></th><td><a href="TEST_123.jpg">
-    Image</a></td></tr><tr><td></td></tr><tr><td></body></html>'''
+    multi_years_html = '''<tr><td bgcolor="#b87333">TEST 123</td><td>Test AD 2
+48-297 filler etc.</td><th><a href="TEST_123.txt">Text</a></th><td><a href="TE
+ST_123.jpg">Image</a></td></tr>'''
     multi_years_coin = coin_from_html(multi_years_html)
     assert coin_year(multi_years_coin) == 248
 
     # Case with BC (negative) years
-    BC_years_html = '''<html><body><br/><enter><p></p><h2></h2><p><br/></p><h3>
-    </h3><table><tr><td bgcolor="#b87333">TEST 123</td><td>Test 49-36 BC filler 
-    etc.</td><th><a href="TEST_123.txt">Text</a></th><td><a href="TEST_123.jpg">
-    Image</a></td></tr><tr><td></td></tr><tr><td></body></html>'''
+    BC_years_html = '''<tr><td bgcolor="#b87333">TEST 123</td><td>Test 49-36 B
+C filler etc.</td><th><a href="TEST_123.txt">Text</a></th><td><a href="TEST_12
+3.jpg">Image</a></td></tr>'''
     BC_years_coin = coin_from_html(BC_years_html)
     assert coin_year(BC_years_coin) == -49
 
     # Case with no years
-    no_years_html = '''<html><body><br/><enter><p></p><h2></h2><p><br/></p><h3>
-    </h3><table><tr><td bgcolor="#b87333">TEST 123</td><td>Test filler 
-    etc.</td><th><a href="TEST_123.txt">Text</a></th><td><a href="TEST_123.jpg">
-    Image</a></td></tr><tr><td></td></tr><tr><td></body></html>'''
+    no_years_html = '''<tr><td bgcolor="#b87333">TEST 123</td><td>Test filler 
+etc.</td><td><a href="TEST_123.txt">Text</a></td><td><a href="TEST_123.jpg">
+Image</a></td></tr>'''
     no_years_coin = coin_from_html(no_years_html)
     assert coin_year(no_years_coin) is None
 
-# def test_coin_txt():
+def test_coin_txt():
+    test_ruler = 'Test Ruler'
+    normal_url = 'https://www.wildwinds.com/coins/ric/test_ruler/TEST_123.txt'
+
+    # Normal case, coin with 4 elements
+    assert coin_txt(normal_coins[0], title=test_ruler) == normal_url
+
+    # Case with 5 elements
+    five_element_html = '''<tr><td>Extra</td><td bgcolor="#FF0000">TEST 123</t
+d><td>Test Desc</td><td><a href='TEST_123.txt'>txt file</a></td><td><a href='T
+EST_123.jpg>jpg file</a></td></tr>'''
+    five_element_coin = coin_from_html(five_element_html)
+    assert coin_txt(five_element_coin, title=test_ruler) == normal_url
+
+    # Case with 6 elements
+    six_element_html = '''<tr><td>Extra</td><td bgcolor="#FF0000">TEST 123</td
+><td>Test Desc</td><td>Extra</td><td><a href='TEST_123.txt'>txt file</a></td><
+td><a href='TEST_123.jpg>jpg file</a></td></tr>'''
+    six_element_coin = coin_from_html(six_element_html)
+    assert coin_txt(six_element_coin, title=test_ruler) == normal_url
+
+    # Case with 7 elements
+    seven_element_html = '''<tr><td>Extra</td><td bgcolor="#FF0000">TEST 123</
+td><td>Extra</td><td>Test Desc</td><td>Extra</td><td><a href='TEST_123.txt'>tx
+t file</a></td><td><a href='TEST_123.jpg>jpg file</a></td></tr>'''
+    seven_element_coin = coin_from_html(seven_element_html)
+    assert coin_txt(seven_element_coin, title=test_ruler) == normal_url
+
+    # Case with 8 elements
+    eight_element_html = '''<tr><td>Extra</td><td bgcolor="#FF0000">TEST 123</
+td><td>Extra</td><td>Test Desc</td><td>Extra</td><td><a href='TEST_123.txt'>tx
+t file</a></td><td>Extra</td><td><a href='TEST_123.jpg>jpg file</a></td></tr>'''
+    eight_element_coin = coin_from_html(eight_element_html)
+    assert coin_txt(eight_element_coin, title=test_ruler) == normal_url
+
+    # Case with no txt
+    no_txt_html = '''<tr><td bgcolor="#FF0000">TEST 123</td><td>Test Des
+c</td><td>filler</td><td><a href='TEST_123.jpg>jpg file</a></td></tr>'''
+    no_txt_coin = coin_from_html(no_txt_html)
+    assert coin_txt(no_txt_coin, title=test_ruler) is None
+
+
+
 # def test_coin_mass():
 # def test_coin_diameter(): 
 # def test_coin_inscriptions():
