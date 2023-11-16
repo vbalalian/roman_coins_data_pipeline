@@ -189,38 +189,38 @@ Image</a></td></tr>'''
 
 def test_coin_txt():
     test_ruler = 'Test Ruler'
-    normal_url = 'https://www.wildwinds.com/coins/ric/test_ruler/TEST_123.txt'
+    test_url = 'https://www.wildwinds.com/coins/ric/test_ruler/TEST_123.txt'
 
     # Normal case, coin with 4 elements
-    assert coin_txt(normal_coins[0], title=test_ruler) == normal_url
+    assert coin_txt(normal_coins[0], title=test_ruler) == test_url
 
     # Case with 5 elements
     five_element_html = '''<tr><td>Extra</td><td bgcolor="#FF0000">TEST 123</t
-d><td>Test Desc</td><td><a href='TEST_123.txt'>txt file</a></td><td><a href='T
-EST_123.jpg>jpg file</a></td></tr>'''
+d><td>Test Description</td><td><a href='TEST_123.txt'>txt file</a></td><td><a 
+href='TEST_123.jpg>jpg file</a></td></tr>'''
     five_element_coin = coin_from_html(five_element_html)
-    assert coin_txt(five_element_coin, title=test_ruler) == normal_url
+    assert coin_txt(five_element_coin, title=test_ruler) == test_url
 
     # Case with 6 elements
     six_element_html = '''<tr><td>Extra</td><td bgcolor="#FF0000">TEST 123</td
-><td>Test Desc</td><td>Extra</td><td><a href='TEST_123.txt'>txt file</a></td><
-td><a href='TEST_123.jpg>jpg file</a></td></tr>'''
+><td>Test Description</td><td>Extra</td><td><a href='TEST_123.txt'>txt file</a
+></td><td><a href='TEST_123.jpg>jpg file</a></td></tr>'''
     six_element_coin = coin_from_html(six_element_html)
-    assert coin_txt(six_element_coin, title=test_ruler) == normal_url
+    assert coin_txt(six_element_coin, title=test_ruler) == test_url
 
     # Case with 7 elements
     seven_element_html = '''<tr><td>Extra</td><td bgcolor="#FF0000">TEST 123</
-td><td>Extra</td><td>Test Desc</td><td>Extra</td><td><a href='TEST_123.txt'>tx
-t file</a></td><td><a href='TEST_123.jpg>jpg file</a></td></tr>'''
+td><td>Extra</td><td>Test Description</td><td>Extra</td><td><a href='TEST_123.
+txt'>txt file</a></td><td><a href='TEST_123.jpg>jpg file</a></td></tr>'''
     seven_element_coin = coin_from_html(seven_element_html)
-    assert coin_txt(seven_element_coin, title=test_ruler) == normal_url
+    assert coin_txt(seven_element_coin, title=test_ruler) == test_url
 
     # Case with 8 elements
     eight_element_html = '''<tr><td>Extra</td><td bgcolor="#FF0000">TEST 123</
-td><td>Extra</td><td>Test Desc</td><td>Extra</td><td><a href='TEST_123.txt'>tx
-t file</a></td><td>Extra</td><td><a href='TEST_123.jpg>jpg file</a></td></tr>'''
+td><td>Extra</td><td>Test Description</td><td>Extra</td><td><a href='TEST_123.
+txt'>txt file</a></td><td>Extra</td><td><a href='123.jpg>jpg</a></td></tr>'''
     eight_element_coin = coin_from_html(eight_element_html)
-    assert coin_txt(eight_element_coin, title=test_ruler) == normal_url
+    assert coin_txt(eight_element_coin, title=test_ruler) == test_url
 
     # Case with no txt
     no_txt_html = '''<tr><td bgcolor="#FF0000">TEST 123</td><td>Test Des
@@ -228,9 +228,22 @@ c</td><td>filler</td><td><a href='TEST_123.jpg>jpg file</a></td></tr>'''
     no_txt_coin = coin_from_html(no_txt_html)
     assert coin_txt(no_txt_coin, title=test_ruler) is None
 
+def test_coin_mass():
+    # Potential gram abbreviations
+    gram_abs = ['16.71 g.', '27.23 g,', '24.8 g.', '8.32 g.', '3.65 gr.', 
+                 '7.3 g.', '10-51 g.', '(3.80 gm).', '9.59g',]
+    for ab in gram_abs:
+        value = float(ab.split('g')[0].strip().replace('-', '.').replace('(', ''))
+        ab_html = f'''<tr><td bgcolor="#FF0000">Id</td><td>Test Desc {ab} fill
+er</td><td><a href='123.txt'>txt</a></td><td><a href='123.jpg'>jpg</a></td></tr>'''
+        ab_html = ab_html.replace('\n', '')
+        ab_coin = coin_from_html(ab_html)
+        mass = coin_mass(ab_coin)
+        assert mass == value
 
+    # Case with no grams
+    assert coin_mass(normal_coins[0]) is None
 
-# def test_coin_mass():
 # def test_coin_diameter(): 
 # def test_coin_inscriptions():
 # def test_coin_df():
