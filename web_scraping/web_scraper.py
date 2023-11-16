@@ -147,11 +147,17 @@ def coin_year(coin):
     return min(valid_years) if valid_years else None
 
 # Function to pull .txt urls
-def coin_txt(coin):
-    for item in coin:
-        match = re.search(r'href="([^"]+\.txt)"', str(item))
-        if match:
-            return match.group(1)
+def coin_txt(coin, title):
+    base_url = 'https://www.wildwinds.com/coins/ric/'
+    for level in [2, 1, 3, 4, 5]:
+        try:
+            for a in coin[level].find_all('a', href=True):
+                filename = a['href']
+                if '.txt' in filename:
+                    return base_url + title.replace(' ', '_').lower() + '/' + filename
+        except:
+            continue
+    return None
 
 # Function to pull coin mass (in grams)
 def coin_mass(coin):
@@ -224,7 +230,7 @@ def coin_df(soup):
         era.append(coin_era(coin))
         year.append(coin_year(coin))
         inscriptions.append(coin_inscriptions(coin))
-        txt.append('https://www.wildwinds.com/coins/ric/' + title.replace(' ', '_').lower() + '/' + coin_txt(coin))
+        txt.append(coin_txt(coin, title=title))
     return pd.DataFrame({'ruler':title, 'ruler_detail':subtitle, 'id':id, 'description':description, 'metal':metal, 'mass':mass, \
                         'diameter':diameter, 'era':era, 'year':year, 'inscriptions':inscriptions, 'txt':txt})
 
