@@ -202,7 +202,7 @@ def coin_inscriptions(coin):
     try:
         description = coin_description(coin)
         inscriptions = {i for i in inscriptions_list if f' {i} ' in description or f' {i},' in description}
-        return ','.join(inscriptions) if inscriptions else None
+        return ','.join(sorted(list(inscriptions))) if inscriptions else None
     except:
         return None
 
