@@ -244,7 +244,22 @@ er</td><td><a href='123.txt'>txt</a></td><td><a href='123.jpg'>jpg</a></td></tr>
     # Case with no grams
     assert coin_mass(normal_coins[0]) is None
 
-# def test_coin_diameter(): 
+def test_coin_diameter():
+    diameter_examples = {'28.4 mm':28.4, '29mm':29.0, 'AE28mm':28.0, '17 mm,':17.0, 
+                         '18.33mm':18.33, '25.13mm,':25.13, '33 mm.':33.0}
+    for ex in diameter_examples:
+        value = diameter_examples[ex]
+        ex_html = f'''<tr><td bgcolor="#FF0000">Id</td><td>Test Desc {ex} fill
+er</td><td><a href='123.txt'>txt</a></td><td><a href='123.jpg'>jpg</a></td></tr>'''
+        ex_html = ex_html.replace('\n', '')
+        ex_coin = coin_from_html(ex_html)
+        diameter = coin_diameter(ex_coin)
+        print(diameter, value)
+        assert diameter == value
+
+    # Case with no grams
+    assert coin_diameter(normal_coins[0]) is None
+ 
 # def test_coin_inscriptions():
 # def test_coin_df():
 # def test_combine_coin_dfs():
