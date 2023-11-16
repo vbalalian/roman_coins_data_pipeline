@@ -163,22 +163,19 @@ def coin_txt(coin, title):
 def coin_mass(coin):
     try:
         description = coin_description(coin)
-        match = re.search(r'(\d+((\.|\,)\d+)?)\s?(?:g|gm|gr)\b', description)
-        return match.group(1).replace(',', '.')
+        match = re.search(r'(\d+((\.|\,|\-)\d+)?)\s?(?:g|gm|gr)\b', description)
+        return float(match.group(1).replace(',', '.').replace('-', '.'))
     except:
         return None
 
 # Function to pull coin diameter (in mm)
 def coin_diameter(coin):
-    coin = str(coin)
-    pattern = re.compile(r'(\d+(\.\d*)?)\s*mm')
-
-    match = pattern.search(coin)
-    
-    if match:
+    try:
+        description = coin_description(coin)
+        match = re.search(r'(\d+(\.\d+)?)\s?(?:mm)', description)
         return float(match.group(1))
-    
-    return None
+    except:
+        return None
 
 # Check for common inscriptions
 ''' ...such as "AVG" (Augustus, title of the emperor), "IMP" (Imperator 
