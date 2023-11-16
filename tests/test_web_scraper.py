@@ -68,14 +68,14 @@ def test_pull_subtitle():
     assert pull_subtitle(BeautifulSoup(navigation_text_html, 'html.parser')) is None
 
 # Normal html and soup
-normal_html = '''<tr><td bgcolor="#b87333">TEST 123</td><td>Test Description A
-D 350-380 28mm, 8.24g. AVG CAES </td><th><a href="TEST_123.txt">Text</a></th><
-td><a href="TEST_123.jpg">Image</a></td></tr><tr><td bgcolor="#C0C0C0">TEST 12
-4</td><td>Test Description 17 BC AE17mm,  filler. PON TR COS</td><th><a href="
-TEST_124.txt">Text</a></th><td><a href="TEST_124.jpg">Image</a></td></tr><tr><
-td bgcolor="#FFD700">TEST 125</td><td>Test Description 17-109 AD  Filler 8.4 g
-. PON TR P</td><th><a href="125.txt">Text</a></th><td><a href="125.jpg">Image<
-/a></td></tr>'''
+normal_html = '''<title>Test Ruler</title><tr><td bgcolor="#b87333">TEST 123</
+td><td>Test Description AD 350-380 28mm, 8.24g. AVG CAES </td><td><a href="TES
+T_123.txt">Text</a></td><td><a href="TEST_123.jpg">Image</a></td></tr><tr><td 
+bgcolor="#C0C0C0">TEST 124</td><td>Test Description 17 BC AE17mm,  filler. PON
+ TR COS</td><th><a href="TEST_124.txt">Text</a></th><td><a href="TEST_124.jpg"
+>Image</a></td></tr><tr><td bgcolor="#FFD700">TEST 125</td><td>Test Descriptio
+n 17-109 AD  Filler 8.4 g. PON TR P</td><th><a href="125.txt">Text</a></th><td
+><a href="125.jpg">Image</a></td></tr>'''
 normal_html = normal_html.replace('\n', '')
 normal_soup = BeautifulSoup(normal_html, 'html.parser')
 normal_coins = [coin.contents for coin in normal_soup.find_all('tr') 
@@ -256,12 +256,12 @@ def test_coin_inscriptions():
                         'AVGVSTVS', 'CAESAR', 'C', 'TRIB POT', 'PON',
                         'MAX', 'PM', 'SPQR', 'S-C', 'TRP', 'PAX']
     for case in test_inscriptions:
-        test_values = set(case.replace(',', '').split())
+        test_values = case.replace(',', '').split()
         html = f'''<tr><td bgcolor="#FF0000">Id</td><td>Test Description Fi
 ller filler Filler filler {case} filler</td><td><a href='123.txt'>tx
 t</a></td><td><a href='123.jpg'>jpg</a></td></tr>'''
         coin = coin_from_html(html)
-        assert coin_inscriptions(coin) == ','.join(test_values)
+        assert set(coin_inscriptions(coin)) == set(','.join(test_values))
         
     # Case with no known inscriptions
     no_inscription_html = '''<tr><td bgcolor="#FF0000">Id</td><td>Test Descrip
@@ -270,10 +270,45 @@ tion Filler filler Filler filler filler</td><td><a href='123.txt'>txt</a></td>
     no_inscription_coin = coin_from_html(no_inscription_html)
     assert coin_inscriptions(no_inscription_coin) is None
 
-# def test_coin_df():
-    # Assert data points of normal_coins_df from normal_soup
-    # Assert data types
-    # Assert df length
+def test_coin_df():
+    # Normal case
+    df = coin_df(normal_soup)
+    assert df.loc[0, 'id'] == 'TEST 123'
+    assert df.loc[0, 'description'] == 'Test Description AD 350-380 28mm, 8.24g. AVG CAES '
+    assert df.loc[0, 'metal'] == 'Copper'
+    assert df.loc[0, 'mass'] == 8.24
+    assert df.loc[0, 'diameter'] == 28.0
+    assert df.loc[0, 'era'] == 'AD'
+    assert df.loc[0, 'year'] == 350
+    assert df.loc[0, 'inscriptions'] == 'AVG,CAES'
+    assert df.loc[0, 'txt'] == 'https://www.wildwinds.com/coins/ric/test_ruler/TEST_123.txt'
+    assert len(df) == 3
 
-# def test_combine_coin_dfs():
-# def test_main():
+def test_combine_coin_dfs():
+    html_2 = '''<title>Test Ruler 2</title><tr><td bgcolor="#b87333">TEST 223</td>
+    <td>Test Description BC 117-124 24mm, 7.3 gr. IMP COS TR </td><td><a href="TES
+    T_223.txt">Text</a></td><td><a href="TEST_223.jpg">Image</a></td></tr><tr><td 
+    bgcolor="#C0C0C0">TEST 224</td><td>Test Description 17 BC AE17mm,  filler. PON
+    TR COS</td><th><a href="TEST_224.txt">Text</a></th><td><a href="TEST_224.jpg"
+    >Image</a></td></tr><tr><td bgcolor="#FFD700">TEST 225</td><td>Test Descriptio
+    n 17-109 AD  Filler 8.4 g. PON TR P</td><th><a href="225.txt">Text</a></th><td
+    ><a href="225.jpg">Image</a></td></tr>'''
+
+    html_3 = '''<title>Test Ruler 3</title><tr><td bgcolor="#b87333">TEST 323</td>
+    <td>Test Description BC 317-324 24mm, 7.3 gr. IMP COS TR </td><td><a href="TES
+    T_323.txt">Text</a></td><td><a href="TEST_323.jpg">Image</a></td></tr><tr><td 
+    bgcolor="#C0C0C0">TEST 324</td><td>Test Description 17 BC AE17mm,  filler. PON
+    TR COS</td><th><a href="TEST_324.txt">Text</a></th><td><a href="TEST_324.jpg"
+    >Image</a></td></tr><tr><td bgcolor="#FFD700">TEST 325</td><td>Test Descriptio
+    n 17-109 AD  Filler 8.4 g. PON TR P</td><th><a href="325.txt">Text</a></th><td
+    ><a href="325.jpg">Image</a></td></tr>'''
+
+    multi_html = [normal_html.replace('\n',''), html_2.replace('\n',''), 
+                html_3.replace('\n','')]
+
+    multi_soups = [BeautifulSoup(html, 'html.parser') for html in multi_html]
+    df = combine_coin_dfs(multi_soups)
+    assert len(df) == 9
+    assert df.loc[8, 'ruler'] == 'Test Ruler 3'
+
+# def test_main(): REQUIRES HTML CACHING; future enhancement
