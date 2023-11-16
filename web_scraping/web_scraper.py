@@ -82,100 +82,103 @@ def coin_id(coin):
     try:
         id_html = coin[0]
         id = id_html.get_text()
-        return id
+        return id if id else None
     except IndexError:
         return None
 
 # Function to pull coin descriptions
 def coin_description(coin):
     try:
-        description_html = coin[1]
-        description = description_html.get_text()
-        return description
+        for i in range(1, 4):
+            chunk = coin[i]
+            desc = chunk.get_text().replace('\r\n', '')
+            if len(desc) >= 50:
+                return desc
     except IndexError:
         return None
 
 # Function to identify coin metal
 def coin_metal(coin):
-    metals = {'#B8':'Copper','#b8':'Copper', '#FF':'Gold', '#C0':'Silver', '#B7':'Brass', '#b7':'Brass', 'red':'FAKE'}
-    coin = str(coin)
+    metals = {
+        '#B87334':'Copper', '#B87333':'Copper', '#b87333':'Copper', 
+        '#FFD700':'Gold', '#ffd700':'Gold', '#FFD660':'Gold', '#FFC601':'Gold', 
+        '#C0C0C0':'Silver', '#c0C0C0':'Silver', '#c0c0c0':'Silver', '#cc9966':'Silver',
+        '#B7A642':'Bronze', '#b7a642':'Bronze', 
+        '#AC9B88':'Lead', 
+        '#FFF7A3':'Bone',
+        'red':'FAKE', '#F34629':'FAKE', '#FA6262':'FAKE', '#FF0000':'FAKE', '#FF4040':'FAKE', '#FA6036':'FAKE'}
     try:
-        bg_color_index = int(coin.find('bgcolor=')) + 9
-        bg_color = coin[bg_color_index:bg_color_index + 3]
-        metal = metals[bg_color]
+        color = list(coin[0].attrs.values())[0]
+        return metals[color]
     except:
         return None
-    return metal
 
 # Function to pull coin era (i.e. 'AD' or 'BC') 
 def coin_era(coin):
-    match = re.search(r'\b(AD|BC)\b', str(coin))
-    return match.group(0) if match else None
+    description = coin_description(coin)
+    try:
+        match = re.search(r'\b(AD|BC)\b', description)
+        return match.group(0)
+    except:
+        return None
 
-# Function to pull a year (not *every* year) in the coin description
-# (if there is a range of years i.e. 117-124 AD, function pulls the year closest to era i.e. '117-124 AD' returns '124', while 'AD 117-124' returns '117')
+# Function to pull first year in the coin description
 def coin_year(coin):
-    era = coin_era(coin)
-    if not era:
+    description = coin_description(coin)
+    try:
+        year_matches = re.findall(r'\b(AD|BC)\s*(\d{1,3})(?:/(\d{1,3})|-(\d' +
+                                  r'{1,3}))?\b|\b(\d{1,3})(?:/(\d{1,3})|-(' +
+                                  r'\d{1,3}))?\s*(AD|BC)\b', description)
+    except:
         return None
 
-    if era == 'AD':
-        # Look for the year pattern before 'AD'
-        match = re.search(r'(\d{1,4})(?=\s*AD)', str(coin))
-    else:
-        # Look for the year pattern before 'BC'
-        match = re.search(r'(\d{1,4})(?=\s*BC)', str(coin))
+    valid_years = []
+    for match in year_matches:
+        era1, start_year1, end_year1_slash, end_year1_dash, start_year2, end_year2_slash, end_year2_dash, era2 = match
+        era = era1 or era2
+        start_year = int(start_year1 or start_year2)
+        end_year = int(end_year1_slash or end_year1_dash or end_year2_slash or 
+                       end_year2_dash) if end_year1_slash or end_year1_dash or \
+                        end_year2_slash or end_year2_dash else None
 
-    if not match:
-        # If no year is found before the era, search after it
-        match = re.search(r'(?<=\bAD\s)(\d{1,4})', str(coin)) if era == 'AD' else re.search(r'(?<=\bBC\s)(\d{1,4})', str(coin))
+        year = start_year
 
-    if match:
-        year = int(match.group(0))
-        return year if era == 'AD' else -year
-    else:
-        return None
+        if year:
+            valid_years.append(year if era not in ['BC', 'B.C.'] else -year)
+
+    return min(valid_years) if valid_years else None
 
 # Function to pull .txt urls
-def coin_txt(coin):
-    for item in coin:
-        match = re.search(r'href="([^"]+\.txt)"', str(item))
-        if match:
-            return match.group(1)
+def coin_txt(coin, title):
+    base_url = 'https://www.wildwinds.com/coins/ric/'
+    for level in [2, 1, 3, 4, 5]:
+        try:
+            for a in coin[level].find_all('a', href=True):
+                filename = a['href']
+                if '.txt' in filename:
+                    return base_url + title.replace(' ', '_').lower() + '/' + filename
+        except:
+            continue
+    return None
 
 # Function to pull coin mass (in grams)
 def coin_mass(coin):
-    coin = str(coin)
-    gram_variations = [r'\bgr\b', r'\bgm\b', r'\bg\b'] 
-    
-    def extract_mass(pattern, coin_text):
-        match = re.search(r'(\d+(?:\.\d+)?)\s*' + pattern, coin_text)
-        if match:
-            num_str = match.group(1).replace(',', '.')
-            try:
-                return float(num_str)
-            except ValueError:
-                return None
+    try:
+        description = coin_description(coin)
+        match = re.search(r'(\d+((\.|\,|\-)\d+)?)\s?(?:g|gm|gr)\b', description)
+        return float(match.group(1).replace(',', '.').replace('-', '.'))
+    except:
         return None
-
-    for grams in gram_variations:
-        mass = extract_mass(grams, coin)
-        if mass is not None:
-            return mass
-            
-    return None
 
 # Function to pull coin diameter (in mm)
 def coin_diameter(coin):
-    coin = str(coin)
-    pattern = re.compile(r'(\d+(\.\d*)?)\s*mm')
-
-    match = pattern.search(coin)
-    
-    if match:
-        return float(match.group(1))
-    
-    return None
+    try:
+        description = coin_description(coin)
+        match = re.search(r'(\d{1,2}(\.\d+)?)\s?(?:mm)', description)
+        diameter = float(match.group(1))
+        return diameter if diameter else None
+    except:
+        return None
 
 # Check for common inscriptions
 ''' ...such as "AVG" (Augustus, title of the emperor), "IMP" (Imperator 
@@ -192,13 +195,16 @@ overseeing taxes, morality, the census and membership in various orders),
 
 # Function to pull recognized inscriptions
 def coin_inscriptions(coin):
-    coin = f" {str(coin)} "
-    inscriptions_list = ['AVG', 'IMP', 'CAES', 'GERM', 'COS', 'CONSVL', 'PP', 'PO', 'PF',
-                         'SC', 'CENS', 'TPP', 'TR', 'RESTITVT', 'BRIT', 'AVGVSTVS', 'CAESAR',
-                         'C', 'TRIB POT', 'PON MAX', 'PM']
-    found_inscriptions = [i for i in inscriptions_list if f' {i} ' in coin]
-    unique_inscriptions = list(set(found_inscriptions))
-    return unique_inscriptions if unique_inscriptions else None
+    inscriptions_list = ['AVG', 'IMP', 'CAES', 'GERM', 'COS', 'CONSVL', 'PP', 
+                         'PO', 'PF', 'SC', 'CENS', 'TPP', 'TR', 'RESTITVT', 
+                         'BRIT', 'AVGVSTVS', 'CAESAR', 'C', 'TRIB', 'POT', 'PON',
+                         'MAX', 'PM', 'SPQR', 'S P Q R', 'S-C', 'TRP', 'PAX']
+    try:
+        description = coin_description(coin)
+        inscriptions = {i for i in inscriptions_list if f' {i} ' in description or f' {i},' in description}
+        return ','.join(sorted(list(inscriptions))) if inscriptions else None
+    except:
+        return None
 
 # Function that combines previous helper functions to return coin DataFrame
 def coin_df(soup):
@@ -214,7 +220,7 @@ def coin_df(soup):
         era.append(coin_era(coin))
         year.append(coin_year(coin))
         inscriptions.append(coin_inscriptions(coin))
-        txt.append(coin_txt(coin))
+        txt.append(coin_txt(coin, title=title))
     return pd.DataFrame({'ruler':title, 'ruler_detail':subtitle, 'id':id, 'description':description, 'metal':metal, 'mass':mass, \
                         'diameter':diameter, 'era':era, 'year':year, 'inscriptions':inscriptions, 'txt':txt})
 
@@ -290,7 +296,7 @@ def main():
     roman_coins.replace([np.inf, -np.inf, np.nan], None, inplace=True)
 
     # Export roman_coins DataFrame as csv
-    roman_coins.to_csv('roman_coins.csv', index=False)
+    roman_coins.to_csv('web_scraping/roman_coins.csv', index=False)
 
 if __name__ == '__main__':
     main()
