@@ -249,7 +249,31 @@ d><a href='123.jpg'>jpg</a></td></tr>'''
     # Case with no grams
     assert coin_diameter(normal_coins[2]) is None
  
-# def test_coin_inscriptions():
+def test_coin_inscriptions():
+    # Cases with known inscriptions, various lengths
+    test_inscriptions = ['AVG', 'IMP CAES', 'GERM COS, CONSVL, PP', 
+                        'PO PF SC CENS TPP', 'TR', 'RESTITVT', 'BRIT', 
+                        'AVGVSTVS', 'CAESAR', 'C', 'TRIB POT', 'PON',
+                        'MAX', 'PM', 'SPQR', 'S-C', 'TRP', 'PAX']
+    for case in test_inscriptions:
+        test_values = set(case.replace(',', '').split())
+        html = f'''<tr><td bgcolor="#FF0000">Id</td><td>Test Description Fi
+ller filler Filler filler {case} filler</td><td><a href='123.txt'>tx
+t</a></td><td><a href='123.jpg'>jpg</a></td></tr>'''
+        coin = coin_from_html(html)
+        assert coin_inscriptions(coin) == ','.join(test_values)
+        
+    # Case with no known inscriptions
+    no_inscription_html = '''<tr><td bgcolor="#FF0000">Id</td><td>Test Descrip
+tion Filler filler Filler filler filler</td><td><a href='123.txt'>txt</a></td>
+<td><a href='123.jpg'>jpg</a></td></tr>'''
+    no_inscription_coin = coin_from_html(no_inscription_html)
+    assert coin_inscriptions(no_inscription_coin) is None
+
 # def test_coin_df():
+    # Assert data points of normal_coins_df from normal_soup
+    # Assert data types
+    # Assert df length
+
 # def test_combine_coin_dfs():
 # def test_main():
