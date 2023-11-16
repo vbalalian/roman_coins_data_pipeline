@@ -194,13 +194,16 @@ overseeing taxes, morality, the census and membership in various orders),
 
 # Function to pull recognized inscriptions
 def coin_inscriptions(coin):
-    description = coin_description(coin)
-    inscriptions_list = ['AVG', 'IMP', 'CAES', 'GERM', 'COS', 'CONSVL', 'PP', 'PO', 'PF',
-                         'SC', 'CENS', 'TPP', 'TR', 'RESTITVT', 'BRIT', 'AVGVSTVS', 'CAESAR',
-                         'C', 'TRIB POT', 'PON MAX', 'PM']
-    found_inscriptions = [i for i in inscriptions_list if f' {i} ' in coin]
-    unique_inscriptions = list(set(found_inscriptions))
-    return unique_inscriptions if unique_inscriptions else None
+    inscriptions_list = ['AVG', 'IMP', 'CAES', 'GERM', 'COS', 'CONSVL', 'PP', 
+                         'PO', 'PF', 'SC', 'CENS', 'TPP', 'TR', 'RESTITVT', 
+                         'BRIT', 'AVGVSTVS', 'CAESAR', 'C', 'TRIB POT', 'PON',
+                         'MAX', 'PM', 'SPQR', 'S P Q R', 'S-C', 'TRP', 'PAX']
+    try:
+        description = coin_description(coin)
+        inscriptions = {i for i in inscriptions_list if f' {i} ' in description or f' {i},' in description}
+        return ','.join(inscriptions) if inscriptions else None
+    except:
+        return None
 
 # Function that combines previous helper functions to return coin DataFrame
 def coin_df(soup):
