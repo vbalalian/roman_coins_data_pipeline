@@ -196,7 +196,7 @@ overseeing taxes, morality, the census and membership in various orders),
 def coin_inscriptions(coin):
     inscriptions_list = ['AVG', 'IMP', 'CAES', 'GERM', 'COS', 'CONSVL', 'PP', 
                          'PO', 'PF', 'SC', 'CENS', 'TPP', 'TR', 'RESTITVT', 
-                         'BRIT', 'AVGVSTVS', 'CAESAR', 'C', 'TRIB POT', 'PON',
+                         'BRIT', 'AVGVSTVS', 'CAESAR', 'C', 'TRIB', 'POT', 'PON',
                          'MAX', 'PM', 'SPQR', 'S P Q R', 'S-C', 'TRP', 'PAX']
     try:
         description = coin_description(coin)
