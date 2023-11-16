@@ -161,25 +161,12 @@ def coin_txt(coin, title):
 
 # Function to pull coin mass (in grams)
 def coin_mass(coin):
-    coin = str(coin)
-    gram_variations = [r'\bgr\b', r'\bgm\b', r'\bg\b'] 
-    
-    def extract_mass(pattern, coin_text):
-        match = re.search(r'(\d+(?:\.\d+)?)\s*' + pattern, coin_text)
-        if match:
-            num_str = match.group(1).replace(',', '.')
-            try:
-                return float(num_str)
-            except ValueError:
-                return None
+    try:
+        description = coin_description(coin)
+        match = re.search(r'(\d+((\.|\,)\d+)?)\s?(?:g|gm|gr)\b', description)
+        return match.group(1).replace(',', '.')
+    except:
         return None
-
-    for grams in gram_variations:
-        mass = extract_mass(grams, coin)
-        if mass is not None:
-            return mass
-            
-    return None
 
 # Function to pull coin diameter (in mm)
 def coin_diameter(coin):
