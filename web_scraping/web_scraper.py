@@ -89,9 +89,11 @@ def coin_id(coin):
 # Function to pull coin descriptions
 def coin_description(coin):
     try:
-        description_html = coin[1]
-        description = description_html.get_text()
-        return description if len(description) > 15 else None
+        for i in range(1, 4):
+            chunk = coin[i]
+            desc = chunk.get_text().replace('\r\n', '')
+            if len(desc) >= 50:
+                return desc
     except IndexError:
         return None
 
@@ -192,7 +194,7 @@ overseeing taxes, morality, the census and membership in various orders),
 
 # Function to pull recognized inscriptions
 def coin_inscriptions(coin):
-    coin = f" {str(coin)} "
+    description = coin_description(coin)
     inscriptions_list = ['AVG', 'IMP', 'CAES', 'GERM', 'COS', 'CONSVL', 'PP', 'PO', 'PF',
                          'SC', 'CENS', 'TPP', 'TR', 'RESTITVT', 'BRIT', 'AVGVSTVS', 'CAESAR',
                          'C', 'TRIB POT', 'PON MAX', 'PM']
