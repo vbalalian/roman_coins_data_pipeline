@@ -4,7 +4,7 @@ import csv
 db_path = 'api/roman_coins.db'
 csv_path = 'web_scraping/roman_coins.csv'
 
-def main():
+def main(db_path = db_path):
     try:
         with sqlite3.connect(db_path) as con:
             cur = con.cursor()
@@ -18,7 +18,7 @@ def main():
                         diameter REAL,
                         era TEXT,
                         year INTEGER,
-                        inscriptions,
+                        inscriptions TEXT,
                         txt TEXT
             );''')
         
