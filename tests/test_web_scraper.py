@@ -230,7 +230,7 @@ d><a href='123.jpg'>jpg</a></td></tr>'''
         assert mass == value
 
     # Case with no grams
-    assert coin_mass(normal_coins[1]) is 0
+    assert coin_mass(normal_coins[1]) is 0.0
 
 def test_coin_diameter():
     diameter_examples = {'28.4 mm':28.4, '29mm':29.0, 'AE28mm':28.0, '17 mm,':17.0, 
@@ -247,7 +247,7 @@ d><a href='123.jpg'>jpg</a></td></tr>'''
         assert diameter == value
 
     # Case with no grams
-    assert coin_diameter(normal_coins[2]) is 0
+    assert coin_diameter(normal_coins[2]) is 0.0
  
 def test_coin_inscriptions():
     # Cases with known inscriptions, various lengths
