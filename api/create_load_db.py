@@ -1,7 +1,7 @@
 import sqlite3
 import csv
 
-db_path = 'roman_coin_api/sqlite3/roman_coins.db'
+db_path = 'api/roman_coins.db'
 csv_path = 'web_scraping/roman_coins.csv'
 
 def main():

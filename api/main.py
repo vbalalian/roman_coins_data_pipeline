@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Query, HTTPException
 import sqlite3
 
-db_path = 'roman_coin_api/sqlite3/roman_coins.db'
+db_path = 'api/roman_coins.db'
 
 app = FastAPI()
 
