@@ -24,34 +24,34 @@ def csv_rows(path:str):
         dr = csv.DictReader(file)
         return list(dr)
 
-def create_table(path:str, table:str, cols:list, dtypes:list):
+def create_table(con:sqlite3.Connection, table:str, cols:list, dtypes:list):
     '''Creates a table based on input connection & parameters'''
-    with connect_db(path) as con:
-        try:
-            cur = con.cursor()
-            cur.execute(f'CREATE TABLE IF NOT EXISTS {table} (' + 
-                        ', '.join(f'{col} {dtype}' for col, dtype 
-                                 in zip(cols, dtypes)) + ');')
-        except sqlite3.Error as e:
-            print("SQLite error (create_table):", e)
+    try:
+        cur = con.cursor()
+        cur.execute(f'CREATE TABLE IF NOT EXISTS {table} (' + 
+                    ', '.join(f'{col} {dtype}' for col, dtype 
+                                in zip(cols, dtypes)) + ');')
+    except sqlite3.Error as e:
+        print("SQLite error (create_table):", e)
 
-def load_table(path:str, table:str, rows:list[dict]):
+def load_table(con:sqlite3.Connection, table:str, rows:list[dict]):
     '''Loads table columns with values'''
-    with connect_db(path) as con:
-        try:
-            cur = con.cursor()
-            for row in rows:
-                columns = ', '.join(row.keys())
-                placeholders = ', '.join(f':{col}' for col in row.keys())
-                query = f'INSERT INTO {table} ({columns}) VALUES ({placeholders});'
-                cur.execute(query, row)
-        except sqlite3.Error as e:
-            print("SQLite error (load_table):", e)
+    try:
+        cur = con.cursor()
+        for row in rows:
+            columns = ', '.join(row.keys())
+            placeholders = ', '.join(f':{col}' for col in row.keys())
+            query = f'INSERT INTO {table} ({columns}) VALUES ({placeholders});'
+            cur.execute(query, row)
+        con.commit()
+    except sqlite3.Error as e:
+        print("SQLite error (load_table):", e)
 
-def main(path:str, table:str, columns:list, dtypes:list, rows:list[dict]):
-    create_table(path, table, columns, dtypes)
-    load_table(path, table, rows)
+def main(con:sqlite3.Connection, table:str, columns:list, dtypes:list, rows:list[dict]):
+    create_table(con, table, columns, dtypes)
+    load_table(con, table, rows)
 
 if __name__ == '__main__':
     roman_coin_rows = csv_rows(csv_path)
-    main(db_path, table_name, table_columns, column_dtypes, roman_coin_rows)
+    con = connect_db(db_path)
+    main(con, table_name, table_columns, column_dtypes, roman_coin_rows)
