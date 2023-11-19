@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Query, HTTPException
+from typing import Annotated
 import sqlite3
 
 db_path = 'api/roman_coins.db'
@@ -31,7 +32,7 @@ async def read_coins(
     ruler: str = None,
     metal: str = None,
     era: str = None,
-    year: str = None
+    year: int = None
     ):
 
     with connect_db() as con:
@@ -74,7 +75,7 @@ async def read_coins(
     return [dict(row) for row in coins]
 
 @app.get('/coins/search')
-async def search_coins(query: str | None = Query(default=None, min_length=1, max_length=50)):
+async def search_coins(query: Annotated[str | None, Query(min_length=1, max_length=50)]):
 
     if query:
         with connect_db() as con:
@@ -87,7 +88,7 @@ async def search_coins(query: str | None = Query(default=None, min_length=1, max
     raise HTTPException(status_code=400, detail='Query string is empty')
 
 @app.get('/coins/id/{coin_id}')
-async def read_coin(coin_id: str):
+async def coin_by_id(coin_id: str):
 
     with sqlite3.connect(db_path) as con:
         cur = con.cursor()
