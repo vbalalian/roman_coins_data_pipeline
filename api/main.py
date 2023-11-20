@@ -16,15 +16,24 @@ async def root():
     return {
         'message':'Welcome to the Roman Coin Data API',
         'status':'OK',
-        'documentation':'/docs',
+        'available_versions':['/v1/'],
+        'documentation':'/docs'
+        }
+
+@app.get('/v1/')
+async def v1_root():
+    return {
+        'message':'Welcome to the Roman Coin Data API - Version 1',
+        'status':'OK',
+        'documentation':'/docs/',
         'endpoints': {
-            '/coins': 'Retrieve a paginated list of coins with optional sorting and filtering',
-            '/coins/id/{coin_id}': 'Retrieve detailed information about a single coin by its ID',
-            '/coins/search': 'Search for coins based on query'
+            '/v1/coins': 'Retrieve a paginated list of coins with optional sorting and filtering',
+            '/v1/coins/id/{coin_id}': 'Retrieve detailed information about a single coin by its ID',
+            '/v1/coins/search': 'Search for coins based on query'
             }
         }
 
-@app.get('/coins/')
+@app.get('/v1/coins/')
 async def read_coins(
     page: int = 1, 
     page_size: int = 10, 
@@ -74,7 +83,7 @@ async def read_coins(
     con.close()
     return [dict(row) for row in coins]
 
-@app.get('/coins/search')
+@app.get('/v1/coins/search')
 async def search_coins(query: Annotated[str | None, Query(min_length=1, max_length=50)]):
 
     if query:
@@ -87,7 +96,7 @@ async def search_coins(query: Annotated[str | None, Query(min_length=1, max_leng
     
     raise HTTPException(status_code=400, detail='Query string is empty')
 
-@app.get('/coins/id/{coin_id}')
+@app.get('/v1/coins/id/{coin_id}')
 async def coin_by_id(coin_id: str):
 
     with sqlite3.connect(db_path) as con:
