@@ -45,31 +45,45 @@ def read_coins(
     ruler: str = None,
     metal: str = None,
     era: str = None,
-    year: int = None
+    year: str = None,
+    min_year: str = None,
+    max_year: str = None,
+    mass: str = None,
+    min_mass: str = None,
+    max_mass: str = None,
+    diameter: str = None,
+    min_diameter: str = None,
+    max_diameter: str = None
     ):
 
     cur = db.cursor()
 
     # Base query
     query = 'SELECT * FROM roman_coins'
-    params = []
+
+    # Mapping filters to their SQL query equivalents
+    filter_mappings = {
+        'ruler': ('ruler', '=', ruler),
+        'metal': ('metal', '=', metal),
+        'era': ('era', '=', era),
+        'year': ('year', '=', year),
+        'min_year':('year', '>=', min_year),
+        'max_year':('year', '<=', max_year),
+        'mass': ('mass', '=', mass),
+        'min_mass':('mass', '>=', min_mass),
+        'max_mass':('mass', '<=', max_mass),
+        'diameter': ('diameter', '=', diameter),
+        'min_diameter':('diameter', '>=', min_diameter),
+        'max_diameter':('diameter', '<=', max_diameter)
+    }
 
     # Filtering logic
-    conditions = []
-    if ruler:
-        conditions.append('ruler = ?')
-        params.append(ruler)
-    if metal:
-        conditions.append('metal = ?')
-        params.append(metal)
-    if era:
-        conditions.append('era = ?')
-        params.append(era)
-    if year:
-        conditions.append('year = ?')
-        params.append(year)
-    if conditions:
+    try:
+        filter_clauses = [(f'{col} {op} ?', val) for col, op, val in filter_mappings.values() if val is not None]
+        conditions, params = [list(a) for a in zip(*filter_clauses)]
         query += ' WHERE ' + ' AND '.join(conditions)
+    except:
+        params = []
     
     # Sorting logic
     if sort_by:
@@ -87,13 +101,18 @@ def read_coins(
 
 @app.get('/v1/coins/search')
 def search_coins(
-    query: Annotated[str | None, Query(min_length=1, max_length=50)], 
+    query: Annotated[list[str], Query(min_length=1, max_length=50)] = None, 
     db: sqlite3.Connection = Depends(get_db)
     ):
 
     if query:
         cur = db.cursor()
-        cur.execute('SELECT * FROM roman_coins WHERE description LIKE ?', ('%' + query + '%',))
+        sql = 'SELECT * FROM roman_coins'
+        search_items = [items if len(items) > 1  else query for items in query]
+        params = [f'%{item}%' for item in search_items]
+        filters = ['description LIKE ?' for _ in search_items]
+        sql += ' WHERE ' + ' AND '.join(filters)
+        cur.execute(sql, params)
         search_result = cur.fetchall()
         return [dict(row) for row in search_result]
     
