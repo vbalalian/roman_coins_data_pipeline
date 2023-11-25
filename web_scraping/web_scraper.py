@@ -8,23 +8,74 @@ from time import sleep
 import requests
 from bs4 import BeautifulSoup
 import re
+import os
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
-# Function to pull html from test pages
-def scrape(url_roots: list[str], delay: int = 30):
-    combined_pages_html = []
-    max_length = 0
-    for root in url_roots:
-        url = root + 'i.html'
-        message = f'requesting {url} ({url_roots.index(root) + 1}/{len(url_roots)})'
-        max_length = max(max_length, len(message))
-        print(f'\r{message.ljust(max_length)}', end=' ', flush=True)
-        if root != url_roots[0]:
-            sleep(delay)
-        page_html = requests.get(url)
-        combined_pages_html.append(page_html)
-    # After the loop, print a final message that clears the last line
-    print(f'\rscraping complete: {url_roots.index(root) + 1}/{len(url_roots)}'.ljust(max_length))
-    return combined_pages_html
+# Check if web_scraper has already run
+flag_file_path = '/app/data/scraping_done.txt'
+if os.path.exists(flag_file_path):
+    print('Scraping already completed. Exiting.')
+    exit()
+
+# Path to roman_coins database
+db_name = os.getenv('DB_NAME', 'roman_coins')
+db_user = os.getenv('DB_USER', 'postgres')
+db_password = os.getenv('DB_PASSWORD', 'postgres')
+db_host = 'db'
+
+# Database connection manager
+def connect_db():
+    '''Returns a connection with PostgreSQL db at path'''
+    try:
+        conn = psycopg2.connect(
+            dbname=db_name, 
+            user=db_user, 
+            password=db_password, 
+            host=db_host,
+            cursor_factory=RealDictCursor)
+    except psycopg2.Error as e:
+        print("Connection error:", e)
+    if conn:
+        return conn
+    
+table_name = 'roman_coins'
+table_columns = ['ruler', 'ruler_detail', 'id', 'description', 'metal', 
+                 'mass', 'diameter', 'era', 'year', 'inscriptions', 'txt']
+column_dtypes = ['VARCHAR(30)', 'VARCHAR(1000)', 'VARCHAR(80)', 'VARCHAR(1000)', 'VARCHAR(20)', 'REAL', 
+                 'REAL', 'VARCHAR(10)', 'REAL', 'VARCHAR(100)', 'VARCHAR(100)']
+
+def create_table(conn:psycopg2.extensions.connection, table:str, cols:list, dtypes:list):
+    '''Creates a table based on input connection & parameters'''
+    try:
+        cur = conn.cursor()
+        cur.execute(f'CREATE TABLE IF NOT EXISTS {table} (' + 
+                    ', '.join(f'{col} {dtype}' for col, dtype 
+                                in zip(cols, dtypes)) + ');')
+    except Exception as e:
+        print("Create Table error:", e)
+    finally:
+        cur.close()
+
+# Function to pull link roots for each "emperor" page
+def get_linkroots(page:str):
+    # Scrape link directory
+    with requests.get(page + 'i.html') as raw:
+        soup = BeautifulSoup(raw.content, 'lxml')
+
+    # Parse html data for a clean list of ruler names
+    options = soup.find_all('option')
+    emperors_raw = [i.contents for i in options if i.attrs['value'] != ''][:-6]
+    emperors = []
+    for line in emperors_raw:
+        for text in line:
+            emperors.append(text.strip())
+
+    # Generate list of usable link roots for each Emperor's coin page
+    linkroots = [page + i.attrs['value'][:-6] for i in options if i.attrs['value'] != ''][:-6]
+    return linkroots
+
+
 
 # Create helper functions for parsing data fields
 # Function for parsing names of coin subjects
@@ -206,97 +257,74 @@ def coin_inscriptions(coin):
     except:
         return None
 
-# Function that combines previous helper functions to return coin DataFrame
-def coin_df(soup):
+# Function that combines previous helper functions to return coins dicts
+def coins_from_soup(soup:BeautifulSoup):
     title = pull_title(soup)
     subtitle = pull_subtitle(soup)
-    id, description, metal, mass, diameter, era, year, inscriptions, txt = [], [], [], [], [], [], [], [], []
+    coins = []
     for coin in pull_coins(soup):
-        id.append(coin_id(coin))
-        description.append(coin_description(coin))
-        metal.append(coin_metal(coin))
-        mass.append(coin_mass(coin))
-        diameter.append(coin_diameter(coin))
-        era.append(coin_era(coin))
-        year.append(coin_year(coin))
-        inscriptions.append(coin_inscriptions(coin))
-        txt.append(coin_txt(coin, title=title))
-    return pd.DataFrame({'ruler':title, 'ruler_detail':subtitle, 'id':id, 'description':description, 'metal':metal, 'mass':mass, \
-                        'diameter':diameter, 'era':era, 'year':year, 'inscriptions':inscriptions, 'txt':txt})
+        coins.append({
+            'ruler':title,
+            'ruler_detail':subtitle,
+            'id':coin_id(coin),
+            'description':coin_description(coin),
+            'metal':coin_metal(coin),
+            'mass':coin_mass(coin),
+            'diameter':coin_diameter(coin),
+            'era':coin_era(coin),
+            'year':coin_year(coin),
+            'inscriptions':coin_inscriptions(coin),
+            'txt':coin_txt(coin, title=title)
+        })
 
-# Function to combine multiple coin Dataframes
-def combine_coin_dfs(soups):
-    dfs = [coin_df(soup) for soup in soups]
-    filtered_dfs = [df for df in dfs if not df.empty and not df.isna().all().all()]
-    return pd.concat(filtered_dfs, ignore_index=True) 
+    return coins if coins else None
+
+# Function to pull html from test pages
+def scrape_page(url_root: str):
+    url = url_root + 'i.html'
+    html = requests.get(url)
+    soup = BeautifulSoup(html.content, 'lxml')
+    return soup
+
+def load_coins(coins:list[dict] | None, conn:psycopg2.extensions.connection, table:str):
+    try:
+        cur = conn.cursor()
+        for coin in coins:
+            columns = ', '.join(coin.keys())
+            placeholders = ', '.join(f'%({col})s' for col in coin.keys())
+            query = f'INSERT INTO {table} ({columns}) VALUES ({placeholders});'
+            cur.execute(query, coin)
+        conn.commit()            
+    except psycopg2.Error as e:
+        print('Load error:', e)
+        conn.rollback()
+    finally:
+        cur.close()
+
+def scrape_and_load(conn:psycopg2.extensions.connection, linkroots:list[str], table:str, delay:int=30):
+    for root in linkroots:
+        print(f'requesting {root + "i.html"} ({linkroots.index(root) + 1}/{len(linkroots)})')
+        sleep(delay)
+        soup = scrape_page(root)
+        coins = coins_from_soup(soup)
+        if coins:
+            print(f'loading coins into database: {db_name} at {db_host} as {db_user}')
+            load_coins(coins, conn, table)
+    print(f'Scraping/Loading complete: {len(linkroots)} pages')
 
 # Pull html from all source pages
-''' (pulling from over 200 pages, which takes a couple hours with the 30 second 
-delay between requests)'''
 def main():
-    # Scrape link directory
-    with requests.get('https://www.wildwinds.com/coins/ric/i.html') as raw:
-        soup = BeautifulSoup(raw.content, 'lxml')
+    ''' (pulling from over 200 pages, which takes a couple hours with the 30 
+    second delay between requests)'''
+    linkroots = get_linkroots('https://www.wildwinds.com/coins/ric/')
+    with connect_db() as conn:
+        create_table(conn, table_name, table_columns, column_dtypes)
+        scrape_and_load(conn, linkroots, table_name)
+    conn.close()
 
-    # Parse html data for a clean list of ruler names
-    options = soup.find_all('option')
-    emperors_raw = [i.contents for i in options if i.attrs['value'] != ''][:-6]
-    emperors = []
-    for line in emperors_raw:
-        for text in line:
-            emperors.append(text.strip())
-
-    # Generate list of usable link roots for each Emperor's coin page
-    # wildwinds.com/robots.txt requires a 30-second delay between requests
-    linkroots = ['https://www.wildwinds.com/coins/ric/' + i.attrs['value'][:-6] for i in options if i.attrs['value'] != ''][:-6]
-
-    all_pages = scrape(linkroots)
-
-    # Parse html of each page using BeautifulSoup
-    all_soups = [BeautifulSoup(page.content, 'lxml') for page in all_pages]
-
-    # Combine it all into a single Dataframe
-    roman_coins_raw = combine_coin_dfs(all_soups)
-
-    # Remove duplicate coins
-    roman_coins = roman_coins_raw.drop_duplicates(subset=['id'], keep='first').copy()
-
-    # Map average year value of each ruler
-    ruler_avg_year = {
-        ruler:round(roman_coins[roman_coins['ruler'] == ruler]['year'].mean(), 1) 
-        for ruler in roman_coins['ruler'].unique().tolist()
-        }
-
-    # Fill missing year values with average year value of matching ruler
-    roman_coins.loc[roman_coins['year'].isna(), 'year'] = roman_coins['ruler'].map(ruler_avg_year)
-
-    # Drop remaining NA year values
-    roman_coins.dropna(subset='year', inplace=True)
-    roman_coins['year'] = roman_coins['year'].astype(int)
-
-    # Map years to eras
-    BC_coins = roman_coins['year'] < 0
-    AD_coins = roman_coins['year'] > 0
-
-    # Fix era values to match year sign
-    roman_coins.loc[BC_coins, 'era'] = 'BC'
-    roman_coins.loc[AD_coins, 'era'] = 'AD'
-
-    # Drop entries with missing metal values
-    roman_coins.dropna(subset=['metal'], inplace=True)
-
-    # Remove coins with outlier year values
-    outlier_coins = (roman_coins['year'] < -50) | (roman_coins['year'] > 500)
-    roman_coins = roman_coins[~outlier_coins]
-
-    # Remove entries still missing id value
-    roman_coins.dropna(subset=['id'], inplace=True)
-
-    # Consolidate missing value types
-    roman_coins.replace([np.inf, -np.inf, np.nan], None, inplace=True)
-
-    # Export roman_coins DataFrame as csv
-    roman_coins.to_csv('web_scraping/roman_coins.csv', index=False)
+    # Flag web_scraping completion
+    with open(flag_file_path, 'w') as file:
+        file.write('done')
 
 if __name__ == '__main__':
     main()

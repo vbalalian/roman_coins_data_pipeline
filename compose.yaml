@@ -1,0 +1,36 @@
+services:
+  api:
+    build: ./api
+    environment:
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=roman_coins
+    ports:
+      - 8000:80
+    depends_on:
+      db:
+        condition: service_healthy
+  web_scraper:
+    build: ./web_scraping
+    depends_on:
+      db:
+        condition: service_healthy
+  db:
+    image: postgres:latest
+    restart: unless-stopped
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=roman_coins
+    expose:
+      - 5432
+    healthcheck:
+      test: [ "CMD", "pg_isready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+volumes:
+  db-data:
+
