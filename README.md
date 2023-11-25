@@ -3,11 +3,11 @@ Extracting, Loading, and Transforming data on Roman Coins gathered from wildwind
 
 **Tools:** Python, PostgreSQL, Docker, FastAPI, BeautifulSoup, Pandas
 
-### [Web](web_scraping/web_scraper.ipynb) [Scraper](web_scraping/web_scraper.py)
+### [Web Scraper](web_scraping/web_scraper.py)
 
 Scrapes data on coins from the Roman Empire from wildwinds.com, and loads the data into a postgres server.
 
-### [API](roman_coin_api/main.py)
+### [API](api/main.py)
 
 Serves data from the roman coins dataset, and allows data ingestion via POST endpoint.
 
