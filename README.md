@@ -1,12 +1,12 @@
 # A (work in progress) end-to-end data pipeline project
 Extracting, Loading, and Transforming data on Roman Coins gathered from wildwinds.com
 
-### [Web](web_scraping/web_scraper.ipynb) [Scraper](web_scraping/web_scraper.py)
-**Tools:** BeautifulSoup, Pandas, Jupyter Notebook  
-**Skills:** Web Scraping, Data Cleaning, Data Visualization
+**Tools:** Python, PostgreSQL, Docker, FastAPI, BeautifulSoup, Pandas
 
-wildwinds.com, written in html, has extensive data on ancient coins organized into various periods. Much of the data is mixed among string descriptions. This webscraper scrapes data from the website section dedicated to coins from of the Roman Empire, which are contained on separate pages for each emperor/figurehead.
+### [Web](web_scraping/web_scraper.ipynb) [Scraper](web_scraping/web_scraper.py)
+
+Scrapes data on coins from the Roman Empire from wildwinds.com, and loads the data into a postgres server.
 
 ### [API](roman_coin_api/main.py)
-**Tools:** FastAPI, SQLite  
-**Skills:** SQL, APIs
+
+Serves data from the roman coins dataset, and allows data ingestion via POST endpoint.
