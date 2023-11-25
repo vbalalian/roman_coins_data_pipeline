@@ -10,3 +10,11 @@ Scrapes data on coins from the Roman Empire from wildwinds.com, and loads the da
 ### [API](roman_coin_api/main.py)
 
 Serves data from the roman coins dataset, and allows data ingestion via POST endpoint.
+
+## To Run:
+**(Requires Docker with Docker Compose)**
+
+Terminal Commands:
+1) git clone https://github.com/vbalalian/RomanCoins
+2) cd RomanCoins
+3) docker compose up
