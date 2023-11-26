@@ -13,7 +13,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 
 # Check if web_scraper has already run
-flag_file_path = '/app/data/scraping_done.txt'
+flag_file_path = '/app/scraping_done.txt'
 if os.path.exists(flag_file_path):
     print('Scraping already completed. Exiting.')
     exit()
@@ -43,7 +43,7 @@ table_name = 'roman_coins'
 table_columns = ['ruler', 'ruler_detail', 'id', 'description', 'metal', 
                  'mass', 'diameter', 'era', 'year', 'inscriptions', 'txt']
 column_dtypes = ['VARCHAR(30)', 'VARCHAR(1000)', 'VARCHAR(80)', 'VARCHAR(1000)', 'VARCHAR(20)', 'REAL', 
-                 'REAL', 'VARCHAR(10)', 'REAL', 'VARCHAR(100)', 'VARCHAR(100)']
+                 'REAL', 'VARCHAR(10)', 'REAL', 'VARCHAR(100)', 'VARCHAR(105)']
 
 def create_table(conn:psycopg2.extensions.connection, table:str, cols:list, dtypes:list):
     '''Creates a table based on input connection & parameters'''
