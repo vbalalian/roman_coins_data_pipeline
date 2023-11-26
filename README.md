@@ -5,11 +5,11 @@ Extracting, Loading, and Transforming data on Roman Coins gathered from wildwind
 
 ### [Web Scraper](web_scraping/web_scraper.py)
 
-Scrapes data on coins from the Roman Empire from wildwinds.com, and loads the data into a postgres server.
+Scrapes data on coins from the Roman Empire from wildwinds.com, and loads the data into a postgres server. Due to the required 30-second delay between page requests, scraping takes several hours to complete; the data is loaded into the server as it arrives.
 
 ### [API](api/main.py)
 
-Serves data from the roman coins dataset, and allows data ingestion via POST endpoint.
+Serves data from the roman coins dataset, and allows data ingestion via POST endpoint. Data is continuously added during web scraping.
 
 ## To Run:
 **(Requires Docker with Docker Compose)**
