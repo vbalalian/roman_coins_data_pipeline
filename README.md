@@ -15,6 +15,6 @@ Serves data from the roman coins dataset, and allows data ingestion via POST end
 **(Requires Docker with Docker Compose)**
 
 Terminal Commands:
-1) git clone https://github.com/vbalalian/RomanCoins
+1) git clone https://github.com/vbalalian/RomanCoins.git
 2) cd RomanCoins
 3) docker compose up
