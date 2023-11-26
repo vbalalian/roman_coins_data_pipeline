@@ -18,13 +18,11 @@ if os.path.exists(flag_file_path):
     print('Scraping already completed. Exiting.')
     exit()
 
-# Path to roman_coins database
 db_name = os.getenv('DB_NAME', 'roman_coins')
 db_user = os.getenv('DB_USER', 'postgres')
 db_password = os.getenv('DB_PASSWORD', 'postgres')
 db_host = 'db'
 
-# Database connection manager
 def connect_db():
     '''Returns a connection with PostgreSQL db at path'''
     try:
@@ -57,9 +55,8 @@ def create_table(conn:psycopg2.extensions.connection, table:str, cols:list, dtyp
     finally:
         cur.close()
 
-# Function to pull link roots for each "emperor" page
 def get_linkroots(page:str):
-    # Scrape link directory
+    '''Scrapes directory for a list of (ruler) pages'''
     with requests.get(page + 'i.html') as raw:
         soup = BeautifulSoup(raw.content, 'lxml')
 
@@ -75,11 +72,8 @@ def get_linkroots(page:str):
     linkroots = [page + i.attrs['value'][:-6] for i in options if i.attrs['value'] != ''][:-6]
     return linkroots
 
-
-
-# Create helper functions for parsing data fields
-# Function for parsing names of coin subjects
 def pull_title(soup):
+    '''Returns title element (corresponding to ruler) from BeautifulSoup object'''
     raw_title = soup.find('title')
     if raw_title:
         title_text = raw_title.text
@@ -90,6 +84,7 @@ def pull_title(soup):
     return None
 
 def pull_subtitle(soup):
+    '''Returns subtitle element from BeautifulSoup object'''
     # Filter function to exclude unwanted text
     def valid_subtitle(text):
         if not text or len(text) < 4:
@@ -123,13 +118,13 @@ def pull_subtitle(soup):
 
     return None
 
-# Function to pull raw coin data
 def pull_coins(soup):
+    '''Returns coins as raw BeautifulSoup objects'''
     coins = [coin.contents for coin in soup.find_all('tr') if len(coin) >2 and 'bgcolor' in str(coin)]
     return coins
 
-# Function to pull coin ids
 def coin_id(coin):
+    '''Returns ID (str) from individual coin (BeautifulSoup) object'''
     try:
         id_html = coin[0]
         id = id_html.get_text()
@@ -137,8 +132,8 @@ def coin_id(coin):
     except IndexError:
         return None
 
-# Function to pull coin descriptions
 def coin_description(coin):
+    '''Returns description (str) from coin (BeautifulSoup) object'''
     try:
         for i in range(1, 4):
             chunk = coin[i]
@@ -148,8 +143,8 @@ def coin_description(coin):
     except IndexError:
         return None
 
-# Function to identify coin metal
 def coin_metal(coin):
+    '''Returns metal/material (str) from coin (BeautifulSoup) object'''
     metals = {
         '#B87334':'Copper', '#B87333':'Copper', '#b87333':'Copper', 
         '#FFD700':'Gold', '#ffd700':'Gold', '#FFD660':'Gold', '#FFC601':'Gold', 
@@ -164,8 +159,8 @@ def coin_metal(coin):
     except:
         return None
 
-# Function to pull coin era (i.e. 'AD' or 'BC') 
 def coin_era(coin):
+    '''Returns era (i.e. 'AD' or 'BC') (str) from coin (BeautifulSoup) object'''
     description = coin_description(coin)
     try:
         match = re.search(r'\b(AD|BC)\b', description)
@@ -173,8 +168,8 @@ def coin_era(coin):
     except:
         return None
 
-# Function to pull first year in the coin description
 def coin_year(coin):
+    '''Returns a year (int) from coin (BeautifulSoup) object'''
     description = coin_description(coin)
     try:
         year_matches = re.findall(r'\b(AD|BC)\s*(\d{1,3})(?:/(\d{1,3})|-(\d' +
@@ -199,8 +194,8 @@ def coin_year(coin):
 
     return min(valid_years) if valid_years else None
 
-# Function to pull .txt urls
 def coin_txt(coin, title):
+    '''Returns .txt url (str) from coin (BeautifulSoup) object'''
     base_url = 'https://www.wildwinds.com/coins/ric/'
     for level in [2, 1, 3, 4, 5]:
         try:
@@ -212,8 +207,8 @@ def coin_txt(coin, title):
             continue
     return None
 
-# Function to pull coin mass (in grams)
 def coin_mass(coin):
+    '''Returns mass (float, in g) from coin (BeautifulSoup) object'''
     try:
         description = coin_description(coin)
         match = re.search(r'(\d+((\.|\,|\-)\d+)?)\s?(?:g|gm|gr)\b', description)
@@ -221,8 +216,8 @@ def coin_mass(coin):
     except:
         return 0.0
 
-# Function to pull coin diameter (in mm)
 def coin_diameter(coin):
+    '''Returns diameter (float, in mm) from coin (BeautifulSoup) object'''
     try:
         description = coin_description(coin)
         match = re.search(r'(\d{1,2}(\.\d+)?)\s?(?:mm)', description)
@@ -244,8 +239,8 @@ people, each renewal indicated by numerals), "CENS" (Censor, a public office
 overseeing taxes, morality, the census and membership in various orders), 
 "BRIT" (Britannicus).'''
 
-# Function to pull recognized inscriptions
 def coin_inscriptions(coin):
+    '''Returns recognized inscriptions (str:'EX1,EX2') from coin (BeautifulSoup) object'''
     inscriptions_list = ['AVG', 'IMP', 'CAES', 'GERM', 'COS', 'CONSVL', 'PP', 
                          'PO', 'PF', 'SC', 'CENS', 'TPP', 'TR', 'RESTITVT', 
                          'BRIT', 'AVGVSTVS', 'CAESAR', 'C', 'TRIB', 'POT', 'PON',
@@ -257,8 +252,8 @@ def coin_inscriptions(coin):
     except:
         return None
 
-# Function that combines previous helper functions to return coins dicts
 def coins_from_soup(soup:BeautifulSoup):
+    '''Returns a list of parsed coins as col:val dicts'''
     title = pull_title(soup)
     subtitle = pull_subtitle(soup)
     coins = []
@@ -279,14 +274,15 @@ def coins_from_soup(soup:BeautifulSoup):
 
     return coins if coins else None
 
-# Function to pull html from test pages
 def scrape_page(url_root: str):
+    '''Returns mass (float) from individual coin (BeautifulSoup object)'''
     url = url_root + 'i.html'
     html = requests.get(url)
     soup = BeautifulSoup(html.content, 'lxml')
     return soup
 
 def load_coins(coins:list[dict] | None, conn:psycopg2.extensions.connection, table:str):
+    '''Loads a list of coins into a postgres table using SQL INSERT statements'''
     try:
         cur = conn.cursor()
         for coin in coins:
@@ -302,6 +298,7 @@ def load_coins(coins:list[dict] | None, conn:psycopg2.extensions.connection, tab
         cur.close()
 
 def scrape_and_load(conn:psycopg2.extensions.connection, linkroots:list[str], table:str, delay:int=30):
+    '''Composite function scrapes a page for coins and loads them into postgres table'''
     for root in linkroots:
         print(f'requesting {root + "i.html"} ({linkroots.index(root) + 1}/{len(linkroots)})')
         sleep(delay)
@@ -312,10 +309,9 @@ def scrape_and_load(conn:psycopg2.extensions.connection, linkroots:list[str], ta
             load_coins(coins, conn, table)
     print(f'Scraping/Loading complete: {len(linkroots)} pages')
 
-# Pull html from all source pages
 def main():
-    ''' (pulling from over 200 pages, which takes a couple hours with the 30 
-    second delay between requests)'''
+    '''Scrapes, processes, and loads data from over 200 page requests, which 
+    takes a couple hours due to required 30-second delay between requests)'''
     linkroots = get_linkroots('https://www.wildwinds.com/coins/ric/')
     with connect_db() as conn:
         create_table(conn, table_name, table_columns, column_dtypes)
