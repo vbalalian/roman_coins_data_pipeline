@@ -35,7 +35,7 @@ RUN adduser \
 RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=bind,source=requirements.txt,target=requirements.txt \
     python3 -m pip install -r requirements.txt 
-RUN chown appuser /app
+RUN mkdir -p /app/data && chown -R appuser:appuser /app/data
 
 # Switch to the non-privileged user to run the application.
 USER appuser

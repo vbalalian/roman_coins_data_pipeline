@@ -13,7 +13,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 
 # Check if web_scraper has already run
-flag_file_path = '/app/scraping_done.txt'
+flag_file_path = '/app/data/scraping_done.txt'
 if os.path.exists(flag_file_path):
     print('Scraping already completed. Exiting.')
     exit()

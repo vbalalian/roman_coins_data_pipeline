@@ -12,6 +12,8 @@ services:
         condition: service_healthy
   web_scraper:
     build: ./web_scraping
+    volumes:
+      - flag:/app/data
     depends_on:
       db:
         condition: service_healthy
@@ -34,4 +36,4 @@ services:
       retries: 5
 volumes:
   db-data:
-
+  flag:
