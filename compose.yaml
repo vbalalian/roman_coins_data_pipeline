@@ -18,6 +18,7 @@ services:
   db:
     image: postgres:latest
     restart: unless-stopped
+    user: postgres
     volumes:
       - db-data:/var/lib/postgresql/data
     environment:
