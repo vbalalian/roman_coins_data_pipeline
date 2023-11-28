@@ -2,8 +2,6 @@
 # coding: utf-8
 
 # Import libraries
-import numpy as np
-import pandas as pd
 from time import sleep
 import requests
 from bs4 import BeautifulSoup
@@ -11,12 +9,6 @@ import re
 import os
 import psycopg2
 from psycopg2.extras import RealDictCursor
-
-# Check if web_scraper has already run
-flag_file_path = '/app/data/scraping_done.txt'
-if os.path.exists(flag_file_path):
-    print('Scraping already completed. Exiting.')
-    exit()
 
 db_name = os.getenv('DB_NAME', 'roman_coins')
 db_user = os.getenv('DB_USER', 'postgres')
@@ -318,9 +310,15 @@ def main():
         scrape_and_load(conn, linkroots, table_name)
     conn.close()
 
+if __name__ == '__main__':
+    # Check if web_scraper has already run
+    flag_file_path = '/app/data/scraping_done.txt'
+    if os.path.exists(flag_file_path):
+        print('Scraping already completed. Exiting.')
+        exit()
+
+    main()
+
     # Flag web_scraping completion
     with open(flag_file_path, 'w') as file:
         file.write('done')
-
-if __name__ == '__main__':
-    main()
