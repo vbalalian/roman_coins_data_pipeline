@@ -1,7 +1,7 @@
 # A (work in progress) end-to-end data pipeline project
 Extracting, Loading, and Transforming data on Roman Coins gathered from wildwinds.com
 
-**Tools:** Python, PostgreSQL, Docker, FastAPI, BeautifulSoup, Pandas
+**Tools:** Python, PostgreSQL, Docker, FastAPI, BeautifulSoup
 
 ### [Web Scraper](web_scraping/web_scraper.py)
 
