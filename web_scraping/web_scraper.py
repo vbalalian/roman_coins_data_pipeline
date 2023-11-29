@@ -10,12 +10,12 @@ import os
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
-db_name = os.getenv('DB_NAME', 'roman_coins')
-db_user = os.getenv('DB_USER', 'postgres')
-db_password = os.getenv('DB_PASSWORD', 'postgres')
-db_host = 'db'
+db_info = {'db_name':os.getenv('DB_NAME', 'roman_coins'),
+           'db_user':os.getenv('DB_USER', 'postgres'),
+           'db_password':os.getenv('DB_PASSWORD', 'postgres'),
+           'db_host':'db'}
 
-def connect_db():
+def connect_db(db_name, db_user, db_password, db_host):
     '''Returns a connection with PostgreSQL db at path'''
     try:
         conn = psycopg2.connect(
@@ -297,7 +297,7 @@ def scrape_and_load(conn:psycopg2.extensions.connection, linkroots:list[str], ta
         soup = scrape_page(root)
         coins = coins_from_soup(soup)
         if coins:
-            print(f'loading coins into database: {db_name} at {db_host} as {db_user}')
+            print(f'loading {len(coins)} coins into database {db_info["db_name"]} as {db_info["db_user"]}...')
             load_coins(coins, conn, table)
     print(f'Scraping/Loading complete: {len(linkroots)} pages')
 
@@ -305,7 +305,7 @@ def main():
     '''Scrapes, processes, and loads data from over 200 page requests, which 
     takes a couple hours due to required 30-second delay between requests)'''
     linkroots = get_linkroots('https://www.wildwinds.com/coins/ric/')
-    with connect_db() as conn:
+    with connect_db(**db_info) as conn:
         create_table(conn, table_name, table_columns, column_dtypes)
         scrape_and_load(conn, linkroots, table_name)
     conn.close()
