@@ -8,7 +8,11 @@ from bs4 import BeautifulSoup
 # Add cwd to path
 sys.path.append(os.getcwd())
 from web_scraper import (connect_db, create_table, get_pages, scrape_page, 
-                         pull_title, pull_subtitle)
+                         pull_title, pull_subtitle, pull_coins, coin_id,
+                         coin_description, coin_metal, coin_era, coin_year,
+                         coin_txt, coin_mass, coin_diameter, coin_inscriptions,
+                         coins_from_soup, load_coins, check_state, 
+                         update_state, scrape_and_load, main)
 
 # Test database variables
 db_info = {'db_name':'test_database',
@@ -220,6 +224,27 @@ class TestPullSubtitle(unittest.TestCase):
         soup = BeautifulSoup(self.navigation_subtitle_html.encode(), 'lxml')
         response = pull_subtitle(soup)
         self.assertIsNone(response)
+
+# pull_coins()
+class TestPullCoins(unittest.TestCase):
+
+    def setUp(self):
+        # Retrieve stored sample html
+        normal_html_path = 'tests/test_data/test_html/normal.html'
+        with open(normal_html_path, 'r') as normal_html_file:
+             self.normal_html = normal_html_file.read()
+        self.missing_coins_html = '<html><body><br/><enter><p></p><h2></h2><p><br/></p><h3></h3><table><tr><td></td></tr><tr><td></body></html>'
+
+    def test_normal_coins(self):
+        soup = BeautifulSoup(self.normal_html.encode(), 'lxml')
+        response = pull_coins(soup)
+        self.assertEqual(len(response), 3)
+        self.assertEqual(response[0][0].get_text(), 'TEST 123')
+
+    def test_missing_coins(self):
+        soup = BeautifulSoup(self.missing_coins_html.encode(), 'lxml')
+        response = pull_coins(soup)
+        self.assertEqual(len(response), 0)
 
 if __name__ == '__main__':
     unittest.main()
