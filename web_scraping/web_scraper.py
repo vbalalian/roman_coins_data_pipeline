@@ -7,6 +7,7 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import os
+import csv
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
@@ -24,10 +25,9 @@ def connect_db(db_name, db_user, db_password, db_host):
             password=db_password, 
             host=db_host,
             cursor_factory=RealDictCursor)
+        return conn
     except psycopg2.Error as e:
         print("Connection error:", e)
-    if conn:
-        return conn
     
 table_name = 'roman_coins'
 table_columns = ['ruler', 'ruler_detail', 'id', 'description', 'metal', 
@@ -289,9 +289,32 @@ def load_coins(coins:list[dict] | None, conn:psycopg2.extensions.connection, tab
     finally:
         cur.close()
 
-def scrape_and_load(conn:psycopg2.extensions.connection, linkroots:list[str], table:str, delay:int=30):
+def check_state(path:str):
+    '''Returns last row of csv state file if it exists, else None'''
+    if os.path.exists(path):
+        with open(path) as state_file:
+            reader = csv.reader(state_file)
+            rows = [row for row in reader]
+        state = rows[-1][0]
+        if state == 'Scraping/Loading complete':
+            print('Scraping already completed. Exiting.')
+            exit()
+        return state
+        
+def update_state(path:str, input:str):
+    ''' Creates csv state file if one doesn't exist; appends it with input'''
+    with open(path, 'a') as state:
+        w = csv.writer(state)
+        w.writerow([input])
+
+def scrape_and_load(conn:psycopg2.extensions.connection, state_path:str | None, linkroots:list[str], table:str, delay:int=30):
     '''Composite function scrapes a page for coins and loads them into postgres table'''
-    for root in linkroots:
+    state = check_state(state_path)
+    if state is not None:
+        checkpoint = linkroots.index(state) + 1
+    else:
+        checkpoint = 0
+    for root in linkroots[checkpoint:]:
         print(f'requesting {root + "i.html"} ({linkroots.index(root) + 1}/{len(linkroots)})')
         sleep(delay)
         soup = scrape_page(root)
@@ -299,7 +322,10 @@ def scrape_and_load(conn:psycopg2.extensions.connection, linkroots:list[str], ta
         if coins:
             print(f'loading {len(coins)} coins into database {db_info["db_name"]} as {db_info["db_user"]}...')
             load_coins(coins, conn, table)
-    print(f'Scraping/Loading complete: {len(linkroots)} pages')
+        update_state(state_path, root)
+    message = 'Scraping/Loading complete'
+    update_state(state_path, message)
+    print(f'{message}: {len(linkroots)} pages')
 
 def main():
     '''Scrapes, processes, and loads data from over 200 page requests, which 
@@ -307,18 +333,9 @@ def main():
     linkroots = get_linkroots('https://www.wildwinds.com/coins/ric/')
     with connect_db(**db_info) as conn:
         create_table(conn, table_name, table_columns, column_dtypes)
-        scrape_and_load(conn, linkroots, table_name)
+        scrape_and_load(conn, state_path, linkroots, table_name)
     conn.close()
 
 if __name__ == '__main__':
-    # Check if web_scraper has already run
-    flag_file_path = '/app/data/scraping_done.txt'
-    if os.path.exists(flag_file_path):
-        print('Scraping already completed. Exiting.')
-        exit()
-
+    state_path = '/app/data/scraping_state.csv'
     main()
-
-    # Flag web_scraping completion
-    with open(flag_file_path, 'w') as file:
-        file.write('done')
