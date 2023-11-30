@@ -20,8 +20,7 @@ table_info = {'name':'test_table',
               'columns':['ruler', 'mass'],
               'dtypes':['VARCHAR(30)', 'REAL']}
 
-# Unit testing
-
+# Unit tests
 # connect_db()
 class TestDatabaseConnection(unittest.TestCase):
 
@@ -124,7 +123,7 @@ class TestGetLinkRoots(unittest.TestCase):
     @patch('web_scraper.requests.get')
     def test_get_linkroots_failure(self, mock_get):
         mock_get.side_effect = requests.ConnectionError
-        
+        self.assertRaises(requests.ConnectionError)
 
 if __name__ == '__main__':
     unittest.main()
