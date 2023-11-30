@@ -18,16 +18,13 @@ db_info = {'db_name':os.getenv('DB_NAME', 'roman_coins'),
 
 def connect_db(db_name, db_user, db_password, db_host):
     '''Returns a connection with PostgreSQL db at path'''
-    try:
-        conn = psycopg2.connect(
-            dbname=db_name, 
-            user=db_user, 
-            password=db_password, 
-            host=db_host,
-            cursor_factory=RealDictCursor)
-        return conn
-    except psycopg2.Error as e:
-        print("Connection error:", e)
+    conn = psycopg2.connect(
+        dbname=db_name, 
+        user=db_user, 
+        password=db_password, 
+        host=db_host,
+        cursor_factory=RealDictCursor)
+    return conn
     
 table_name = 'roman_coins'
 table_columns = ['ruler', 'ruler_detail', 'id', 'description', 'metal', 
@@ -37,32 +34,25 @@ column_dtypes = ['VARCHAR(30)', 'VARCHAR(1000)', 'VARCHAR(80)', 'VARCHAR(1000)',
 
 def create_table(conn:psycopg2.extensions.connection, table:str, cols:list, dtypes:list):
     '''Creates a table based on input connection & parameters'''
-    try:
-        cur = conn.cursor()
+    with conn.cursor() as cur:
         cur.execute(f'CREATE TABLE IF NOT EXISTS {table} (' + 
                     ', '.join(f'{col} {dtype}' for col, dtype 
                                 in zip(cols, dtypes)) + ');')
-    except Exception as e:
-        print("Create Table error:", e)
-    finally:
-        cur.close()
 
-def get_linkroots(page:str):
+def get_pages(page:str):
     '''Scrapes directory for a list of (ruler) pages'''
-    with requests.get(page + 'i.html') as raw:
+    url_root = page[:-6]
+    with requests.get(page) as raw:
         soup = BeautifulSoup(raw.content, 'lxml')
-
-    # Parse html data for a clean list of ruler names
     options = soup.find_all('option')
-    emperors_raw = [i.contents for i in options if i.attrs['value'] != ''][:-6]
-    emperors = []
-    for line in emperors_raw:
-        for text in line:
-            emperors.append(text.strip())
+    pages = [url_root + i.attrs['value'] for i in options if i.attrs['value'] != ''][:-6]
+    return pages
 
-    # Generate list of usable link roots for each Emperor's coin page
-    linkroots = [page + i.attrs['value'][:-6] for i in options if i.attrs['value'] != ''][:-6]
-    return linkroots
+def scrape_page(url: str):
+    '''Returns BeautifulSoup object of url'''
+    html = requests.get(url)
+    soup = BeautifulSoup(html.content, 'lxml')
+    return soup
 
 def pull_title(soup):
     '''Returns title element (corresponding to ruler) from BeautifulSoup object'''
@@ -266,13 +256,6 @@ def coins_from_soup(soup:BeautifulSoup):
 
     return coins if coins else None
 
-def scrape_page(url_root: str):
-    '''Returns mass (float) from individual coin (BeautifulSoup object)'''
-    url = url_root + 'i.html'
-    html = requests.get(url)
-    soup = BeautifulSoup(html.content, 'lxml')
-    return soup
-
 def load_coins(coins:list[dict] | None, conn:psycopg2.extensions.connection, table:str):
     '''Loads a list of coins into a postgres table using SQL INSERT statements'''
     try:
@@ -307,33 +290,33 @@ def update_state(path:str, input:str):
         w = csv.writer(state)
         w.writerow([input])
 
-def scrape_and_load(conn:psycopg2.extensions.connection, state_path:str | None, linkroots:list[str], table:str, delay:int=30):
+def scrape_and_load(conn:psycopg2.extensions.connection, state_path:str | None, pages:list[str], table:str, delay:int=30):
     '''Composite function scrapes a page for coins and loads them into postgres table'''
     state = check_state(state_path)
     if state is not None:
-        checkpoint = linkroots.index(state) + 1
+        checkpoint = pages.index(state) + 1
     else:
         checkpoint = 0
-    for root in linkroots[checkpoint:]:
-        print(f'requesting {root + "i.html"} ({linkroots.index(root) + 1}/{len(linkroots)})')
+    for page in pages[checkpoint:]:
+        print(f'requesting {page} ({pages.index(page) + 1}/{len(pages)})')
         sleep(delay)
-        soup = scrape_page(root)
+        soup = scrape_page(page)
         coins = coins_from_soup(soup)
         if coins:
             print(f'loading {len(coins)} coins into database {db_info["db_name"]} as {db_info["db_user"]}...')
             load_coins(coins, conn, table)
-        update_state(state_path, root)
+        update_state(state_path, page)
     message = 'Scraping/Loading complete'
     update_state(state_path, message)
-    print(f'{message}: {len(linkroots)} pages')
+    print(f'{message}: {len(pages)} pages')
 
 def main():
     '''Scrapes, processes, and loads data from over 200 page requests, which 
     takes a couple hours due to required 30-second delay between requests)'''
-    linkroots = get_linkroots('https://www.wildwinds.com/coins/ric/')
+    pages = get_pages('https://www.wildwinds.com/coins/ric/i.html')
     with connect_db(**db_info) as conn:
         create_table(conn, table_name, table_columns, column_dtypes)
-        scrape_and_load(conn, state_path, linkroots, table_name)
+        scrape_and_load(conn, state_path, pages, table_name)
     conn.close()
 
 if __name__ == '__main__':
