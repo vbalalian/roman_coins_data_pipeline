@@ -4,9 +4,11 @@ import unittest
 from unittest.mock import patch, MagicMock
 import psycopg2
 import requests
+from bs4 import BeautifulSoup
 # Add cwd to path
 sys.path.append(os.getcwd())
-from web_scraper import connect_db, create_table, get_pages, scrape_page
+from web_scraper import (connect_db, create_table, get_pages, scrape_page, 
+                         pull_title, pull_subtitle)
 
 # Test database variables
 db_info = {'db_name':'test_database',
@@ -97,7 +99,7 @@ class TestGetPages(unittest.TestCase):
              sample_html = sample_html_file.read()
 
         mock_response = MagicMock()
-        mock_response.content = sample_html.encode('utf-8')
+        mock_response.content = sample_html.encode()
         # Mocking __enter__ and __exit__ required for with statement in get_pages()
         mock_response.__enter__.return_value = mock_response
         mock_response.__exit__.return_value = None
@@ -130,18 +132,20 @@ class TestScrapePage(unittest.TestCase):
 
     @patch('web_scraper.requests.get')
     def test_scrape_page_success(self, mock_get):
+        test_html_content = '<html><body><h1>TEST HTML CONTENT</h1></body></html>'
         mock_response = MagicMock()
-        mock_response.content = '<html><body>TEST HTML CONTENT</body></html>'
+        mock_response.content = test_html_content.encode()
         mock_get.return_value = mock_response
 
         test_url = 'http://testsite.com/coins/ric/augustus/i.html'
 
         result = scrape_page(test_url)
 
-        mock_get.assert_called_once()
-        self.assertIn('TEST HTML CONTENT', result)
+        mock_get.assert_called_with(test_url)
+        self.assertIsInstance(result, BeautifulSoup)
+        self.assertEqual(result, BeautifulSoup(test_html_content, 'lxml'))
 
-    @patch('web_scraping.requests.get')
+    @patch('web_scraper.requests.get')
     def test_scrape_page_failure(self, mock_get):
         mock_get.side_effect = requests.ConnectionError
 
@@ -150,6 +154,72 @@ class TestScrapePage(unittest.TestCase):
         with self.assertRaises(requests.ConnectionError):
             scrape_page(test_url)
         mock_get.assert_called_once()
+
+# pull_title()
+class TestPullTitle(unittest.TestCase):
+
+    def setUp(self):
+        self.normal_html = '<html><head><title>Test Title</title></head><body></body></html>'
+        self.missing_title_html = '<html><head></head><body></body></html>'
+        self.empty_title_html = '<html><head><title></title></head><body></body></html>'
+
+    def test_normal_html(self):
+        soup = BeautifulSoup(self.normal_html.encode(), 'lxml')
+        response = pull_title(soup)
+        expected_title = 'Test Title'
+        self.assertEqual(response, expected_title)
+
+    def test_missing_title_html(self):
+        soup = BeautifulSoup(self.missing_title_html.encode(), 'lxml')
+        response = pull_title(soup)
+        self.assertIsNone(response)
+
+    def test_empty_title_html(self):
+        soup = BeautifulSoup(self.empty_title_html.encode(), 'lxml')
+        response = pull_title(soup)
+        self.assertIsNone(response)
+
+# pull_subtitle()
+class TestPullSubtitle(unittest.TestCase):
+
+    def setUp(self):
+        self.direct_subtitle_html = "<html><body><title>Test Ruler</title><h2>Browsing Coins of Test Ruler</h2>Subtitle</body></html>"
+        self.p_subtitle_html = "<html><body><title>Test Ruler</title><h2></h2><p>Subtitle</p></body></html>"
+        self.font_subtitle_html = "<html><body><h2>Test Ruler</h2><p><font>Subtitle</font></p></body></html>"
+        self.complex_subtitle_html = '<html><body><h2>Test Ruler</h2><p><img src="test.jpg"/><br/>Subtitle</p></body></html>'
+        self.no_subtitle_html = '<html><body><h2>Test Ruler</h2><p></p></body></html>'
+        self.navigation_subtitle_html = '<html><body><h2>Test Ruler</h2><p>Browse the Test Page</p></body></html>'
+        self.expected_subtitle = 'Subtitle'
+
+    def test_direct_subtitle(self):
+        soup = BeautifulSoup(self.direct_subtitle_html.encode(), 'lxml')
+        response = pull_subtitle(soup)
+        self.assertEqual(response, self.expected_subtitle)
+
+    def test_p_subtitle(self):
+        soup = BeautifulSoup(self.p_subtitle_html.encode(), 'lxml')
+        response = pull_subtitle(soup)
+        self.assertEqual(response, self.expected_subtitle)
+
+    def test_font_subtitle(self):
+        soup = BeautifulSoup(self.font_subtitle_html.encode(), 'lxml')
+        response = pull_subtitle(soup)
+        self.assertEqual(response, self.expected_subtitle)
+
+    def test_complex_subtitle(self):
+        soup = BeautifulSoup(self.complex_subtitle_html.encode(), 'lxml')
+        response = pull_subtitle(soup)
+        self.assertEqual(response, self.expected_subtitle)
+
+    def test_no_subtitle(self):
+        soup = BeautifulSoup(self.no_subtitle_html.encode(), 'lxml')
+        response = pull_subtitle(soup)
+        self.assertIsNone(response)
+
+    def test_navigation_subtitle(self):
+        soup = BeautifulSoup(self.navigation_subtitle_html.encode(), 'lxml')
+        response = pull_subtitle(soup)
+        self.assertIsNone(response)
 
 if __name__ == '__main__':
     unittest.main()
