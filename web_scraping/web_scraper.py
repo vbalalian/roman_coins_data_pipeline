@@ -62,7 +62,9 @@ def pull_title(soup):
         sep_index = title_text.find(',')
         if sep_index == -1:
             sep_index = title_text.find('-')
-        return title_text[:sep_index].strip() if sep_index != -1 else title_text.strip()
+        title = title_text[:sep_index].strip() if sep_index != -1 else title_text.strip()
+        if title:
+            return title
     return None
 
 def pull_subtitle(soup):
