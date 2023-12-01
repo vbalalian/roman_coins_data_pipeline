@@ -404,7 +404,24 @@ class TestCoinDiameter(unittest.TestCase):
         self.assertEqual(coin_diameter(missing_diameter_coin), 0.0)
 
 # coin_inscriptions()
+class TestCoinInscriptions(unittest.TestCase):
 
+    def test_normal_inscriptions(self):
+        test_inscriptions = ['AVG', 'IMP CAES', 'GERM COS, CONSVL, PP', 
+                            'PO PF SC CENS TPP', 'TR', 'RESTITVT', 'BRIT', 
+                            'AVGVSTVS', 'CAESAR', 'C', 'TRIB POT', 'PON',
+                            'MAX', 'PM', 'SPQR', 'S-C', 'TRP', 'PAX']
+        for case in test_inscriptions:
+            test_values = case.replace(',', '').split()
+            case_html = f'''<tr><td bgcolor="#FF0000">Id</td><td>Test Description Filler filler Filler filler {case} filler</td><td><a href='123.txt'>txt</a></td><td><a href='123.jpg'>jpg</a></td></tr>'''
+            coin = coins_from_html(html=case_html)
+            self.assertEqual(set(coin_inscriptions(coin)), set(','.join(test_values)))
+    
+    def test_missing_inscription(self):
+        # Case with no known inscriptions
+        no_inscription_html = '''<tr><td bgcolor="#FF0000">Id</td><td>Test Description Filler filler Filler filler filler</td><td><a href='123.txt'>txt</a></td><td><a href='123.jpg'>jpg</a></td></tr>'''
+        no_inscription_coin = coins_from_html(html=no_inscription_html)
+        self.assertIsNone(coin_inscriptions(no_inscription_coin))
 
 if __name__ == '__main__':
     unittest.main()
