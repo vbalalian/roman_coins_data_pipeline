@@ -246,5 +246,62 @@ class TestPullCoins(unittest.TestCase):
         response = pull_coins(soup)
         self.assertEqual(len(response), 0)
 
+# Helper function
+def coins_from_html(path:str = None, html:str = None):
+    if path:
+        with open(path, 'r') as html_file:
+            html = html_file.read()
+    soup = BeautifulSoup(html.replace('\n', '').encode(), 'lxml')
+    return pull_coins(soup)
+
+# coin_id()
+class TestCoinID(unittest.TestCase):
+
+    def setUp(self):
+        self.normal_html_path = 'tests/test_data/test_html/normal.html'
+        self.missing_id_html_path = 'tests/test_data/test_html/missing_id.html'
+    
+    def test_normal_id(self):
+        normal_coins = coins_from_html(path=self.normal_html_path)
+        self.assertEqual(coin_id(normal_coins[0]), 'TEST 123')
+        self.assertEqual(coin_id(normal_coins[1]), 'TEST 124')
+        self.assertEqual(coin_id(normal_coins[2]), 'TEST 125')
+
+    def test_missing_id(self):
+        missing_id_coin = coins_from_html(path=self.missing_id_html_path)[0]
+        self.assertIsNone(coin_id(missing_id_coin))
+        
+# coin_description()
+class TestCoinDescription(unittest.TestCase):
+
+    def setUp(self):
+        self.normal_html_path = 'tests/test_data/test_html/normal.html'
+        self.missing_description_html = '<tr><td bgcolor="#B7A642">TEST 123</td><th><a href="TEST_123.txt">Text</a></th><td><a href="TEST_123.jpg">Image</a></td></tr>'
+
+    def test_normal_descriptions(self):
+        normal_coins = coins_from_html(path=self.normal_html_path)
+        self.assertEqual(coin_description(normal_coins[0]), 'Test Description AD 350-380 28mm, 8.24g. AVG CAES ')
+        self.assertEqual(coin_description(normal_coins[1]), 'Test Description 17 BC AE17mm,  filler. PON TR COS')
+        self.assertEqual(coin_description(normal_coins[2]), 'Test Description 17-109 AD  Filler 8.4 g. PON TR P')
+
+    def test_missing_description(self):
+        missing_description_coin = coins_from_html(html=self.missing_description_html)[0]
+        self.assertIsNone(coin_description(missing_description_coin))
+
+# coin_metal()
+
+# coin_era()
+
+# coin_year()
+
+# coin_txt()
+
+# coin_mass()
+
+# coin_diameter()
+
+# coin_inscriptions()
+
+
 if __name__ == '__main__':
     unittest.main()
