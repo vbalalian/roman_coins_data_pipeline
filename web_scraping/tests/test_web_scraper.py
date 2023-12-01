@@ -23,7 +23,6 @@ table_info = {'name':'test_table',
               'columns':['ruler', 'mass'],
               'dtypes':['VARCHAR(30)', 'REAL']}
 
-# Unit tests
 # connect_db()
 class TestDatabaseConnection(unittest.TestCase):
 
@@ -422,6 +421,38 @@ class TestCoinInscriptions(unittest.TestCase):
         no_inscription_html = '''<tr><td bgcolor="#FF0000">Id</td><td>Test Description Filler filler Filler filler filler</td><td><a href='123.txt'>txt</a></td><td><a href='123.jpg'>jpg</a></td></tr>'''
         no_inscription_coin = coins_from_html(html=no_inscription_html)
         self.assertIsNone(coin_inscriptions(no_inscription_coin))
+
+# coins_from_soup()
+class TestCoinsFromSoup(unittest.TestCase):
+
+    def test_normal_soup(self):
+        with open('tests/test_data/test_html/normal.html', 'r') as html_file:
+            html = html_file.read()
+        soup = BeautifulSoup(html.replace('\n', '').encode(), 'lxml')
+        coins = coins_from_soup(soup)
+        test_coin = coins[0]
+        self.assertEqual(test_coin['ruler'], 'Test Ruler')
+        self.assertEqual(test_coin['ruler_detail'], 'Test Subtitle')
+        self.assertEqual(test_coin['id'], 'TEST 123')
+        self.assertEqual(test_coin['description'], 'Test Description AD 350 28mm, 8.24g. AVG CAES filler')
+        self.assertEqual(test_coin['metal'], 'Copper')
+        self.assertEqual(test_coin['mass'], 8.24)
+        self.assertEqual(test_coin['diameter'], 28.0)
+        self.assertEqual(test_coin['era'], 'AD')
+        self.assertEqual(test_coin['year'], 350)
+        self.assertEqual(test_coin['inscriptions'], 'AVG,CAES')
+        self.assertEqual(test_coin['txt'], 'https://www.wildwinds.com/coins/ric/test_ruler/TEST_123.txt')
+
+
+# load_coins()
+
+# check_state()
+
+# update_state()
+
+# scrape_and_load()
+
+# main
 
 if __name__ == '__main__':
     unittest.main()
