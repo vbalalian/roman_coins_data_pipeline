@@ -227,22 +227,20 @@ class TestPullSubtitle(unittest.TestCase):
 
 # pull_coins()
 class TestPullCoins(unittest.TestCase):
-
-    def setUp(self):
+    
+    def test_normal_coins(self):
         # Retrieve stored sample html
         normal_html_path = 'tests/test_data/test_html/normal.html'
         with open(normal_html_path, 'r') as normal_html_file:
-             self.normal_html = normal_html_file.read()
-        self.missing_coins_html = '<html><body><br/><enter><p></p><h2></h2><p><br/></p><h3></h3><table><tr><td></td></tr><tr><td></body></html>'
-
-    def test_normal_coins(self):
-        soup = BeautifulSoup(self.normal_html.encode(), 'lxml')
+             normal_html = normal_html_file.read()
+        soup = BeautifulSoup(normal_html.encode(), 'lxml')
         response = pull_coins(soup)
         self.assertEqual(len(response), 3)
         self.assertEqual(response[0][0].get_text(), 'TEST 123')
 
     def test_missing_coins(self):
-        soup = BeautifulSoup(self.missing_coins_html.encode(), 'lxml')
+        missing_coins_html = '<html><body><br/><enter><p></p><h2></h2><p><br/></p><h3></h3><table><tr><td></td></tr><tr><td></body></html>'
+        soup = BeautifulSoup(missing_coins_html.encode(), 'lxml')
         response = pull_coins(soup)
         self.assertEqual(len(response), 0)
 
@@ -252,49 +250,123 @@ def coins_from_html(path:str = None, html:str = None):
         with open(path, 'r') as html_file:
             html = html_file.read()
     soup = BeautifulSoup(html.replace('\n', '').encode(), 'lxml')
-    return pull_coins(soup)
+    coins = pull_coins(soup)
+    if len(coins) == 1:
+        return coins[0]
+    return coins 
 
 # coin_id()
 class TestCoinID(unittest.TestCase):
-
-    def setUp(self):
-        self.normal_html_path = 'tests/test_data/test_html/normal.html'
-        self.missing_id_html_path = 'tests/test_data/test_html/missing_id.html'
     
     def test_normal_id(self):
-        normal_coins = coins_from_html(path=self.normal_html_path)
+        normal_coins = coins_from_html(path='tests/test_data/test_html/normal.html')
         self.assertEqual(coin_id(normal_coins[0]), 'TEST 123')
         self.assertEqual(coin_id(normal_coins[1]), 'TEST 124')
         self.assertEqual(coin_id(normal_coins[2]), 'TEST 125')
 
     def test_missing_id(self):
-        missing_id_coin = coins_from_html(path=self.missing_id_html_path)[0]
+        missing_id_html_path = 'tests/test_data/test_html/missing_id.html'
+        missing_id_coin = coins_from_html(path=missing_id_html_path)
         self.assertIsNone(coin_id(missing_id_coin))
         
 # coin_description()
 class TestCoinDescription(unittest.TestCase):
 
-    def setUp(self):
-        self.normal_html_path = 'tests/test_data/test_html/normal.html'
-        self.missing_description_html = '<tr><td bgcolor="#B7A642">TEST 123</td><th><a href="TEST_123.txt">Text</a></th><td><a href="TEST_123.jpg">Image</a></td></tr>'
-
     def test_normal_descriptions(self):
-        normal_coins = coins_from_html(path=self.normal_html_path)
-        self.assertEqual(coin_description(normal_coins[0]), 'Test Description AD 350-380 28mm, 8.24g. AVG CAES ')
+        normal_coins = coins_from_html(path='tests/test_data/test_html/normal.html')
+        self.assertEqual(coin_description(normal_coins[0]), 'Test Description AD 350 28mm, 8.24g. AVG CAES filler')
         self.assertEqual(coin_description(normal_coins[1]), 'Test Description 17 BC AE17mm,  filler. PON TR COS')
         self.assertEqual(coin_description(normal_coins[2]), 'Test Description 17-109 AD  Filler 8.4 g. PON TR P')
 
     def test_missing_description(self):
-        missing_description_coin = coins_from_html(html=self.missing_description_html)[0]
+        missing_description_html = '<tr><td bgcolor="#B7A642">TEST 123</td><th><a href="TEST_123.txt">Text</a></th><td><a href="TEST_123.jpg">Image</a></td></tr>'
+        missing_description_coin = coins_from_html(html=missing_description_html)
         self.assertIsNone(coin_description(missing_description_coin))
 
 # coin_metal()
+class TestCoinMetal(unittest.TestCase):
 
+    def test_normal_metals(self):
+        normal_coins = coins_from_html(path='tests/test_data/test_html/normal.html')
+        self.assertEqual(coin_metal(normal_coins[0]), 'Copper')
+        self.assertEqual(coin_metal(normal_coins[1]), 'Silver')
+        self.assertEqual(coin_metal(normal_coins[2]), 'Gold')
+
+    def test_missing_metal(self):
+        missing_metal_html = '<tr><td>TEST 123</td><td>Test Desc</td><th><a href="TEST_123.txt">Text</a></th><td><a href="TEST_123.jpg">Image</a></td></tr>'
+        missing_metal_coin = coins_from_html(html=missing_metal_html)
+        self.assertIsNone(coin_metal(missing_metal_coin))
+    
 # coin_era()
+class TestCoinEra(unittest.TestCase):
+
+    def test_normal_eras(self):
+        normal_coins = coins_from_html(path='tests/test_data/test_html/normal.html')
+        self.assertEqual(coin_era(normal_coins[0]), 'AD')
+        self.assertEqual(coin_era(normal_coins[1]), 'BC')
+
+    def test_missing_era(self):
+        missing_era_html = '<tr><td bgcolor="#b87333">TEST 123</td><td>Test Description 217-219 AE17mm, 8.4 g. PON TR P Filler</td><th><a href="TEST_123.txt">Text</a></th><td><a href="TEST_123.jpg">Image</a></td></tr>'
+        missing_era_coin = coins_from_html(html=missing_era_html)
+        self.assertIsNone(coin_era(missing_era_coin))
 
 # coin_year()
+class TestCoinYear(unittest.TestCase):
+
+    def test_normal_years(self):
+        normal_coins = coins_from_html(path='tests/test_data/test_html/normal.html')
+        # Case with single year (350 AD)
+        self.assertEqual(coin_year(normal_coins[0]), 350)
+        # Case with single year (17 BC)
+        self.assertEqual(coin_year(normal_coins[1]), -17)
+        # Case with multiple years (17-109 AD)
+        self.assertEqual(coin_year(normal_coins[2]), 17)
+    
+    def test_missing_year(self):
+        missing_year_html = '<tr><td bgcolor="#b87333">TEST 123</td><td>Test Description  AE17mm, 8.4 g. PON TR P Filler filler</td><td><a href="TEST_123.txt">Text</a></td><td><a href="TEST_123.jpg">Image</a></td></tr>'
+        missing_year_coin = coins_from_html(html=missing_year_html)
+        self.assertIsNone(coin_year(missing_year_coin))
 
 # coin_txt()
+class TestCoinTxt(unittest.TestCase):
+
+    def setUp(self):
+        self.test_ruler = 'Test Ruler'
+        self.test_url = 'https://www.wildwinds.com/coins/ric/test_ruler/TEST_123.txt'
+    
+    def test_normal_txt(self): # 4 elements
+        normal_coins = coins_from_html(path='tests/test_data/test_html/normal.html')
+        self.assertEqual(coin_txt(normal_coins[0], title=self.test_ruler), self.test_url)
+
+    def test_txt_five_elements(self):
+        # Case with 5 elements
+        five_element_html = '<tr><td>Extra</td><td bgcolor="#FF0000">TEST 123</td><td>Test Description</td><td><a href="TEST_123.txt">txt file</a></td><td><a href="TEST_123.jpg">jpg file</a></td></tr>'
+        five_element_coin = coins_from_html(html=five_element_html)
+        self.assertEqual(coin_txt(five_element_coin, title=self.test_ruler), self.test_url)
+
+    def test_txt_six_elements(self):
+        # Case with 6 elements
+        six_element_html = '<tr><td>Extra</td><td bgcolor="#FF0000">TEST 123</td><td>Test Description</td><td>Extra</td><td><a href="TEST_123.txt">txt file</a></td><td><a href="TEST_123.jpg">jpg file</a></td></tr>'
+        six_element_coin = coins_from_html(html=six_element_html)
+        self.assertEqual(coin_txt(six_element_coin, title=self.test_ruler), self.test_url)
+
+    def test_txt_seven_elements(self):
+        # Case with 7 elements
+        seven_element_html = '<tr><td>Extra</td><td bgcolor="#FF0000">TEST 123</td><td>Extra</td><td>Test Description</td><td>Extra</td><td><a href="TEST_123.txt">txt file</a></td><td><a href="TEST_123.jpg">jpg file</a></td></tr>'
+        seven_element_coin = coins_from_html(html=seven_element_html)
+        self.assertEqual(coin_txt(seven_element_coin, title=self.test_ruler), self.test_url)
+
+    def test_txt_eight_elements(self):
+        # Case with 8 elements
+        eight_element_html = '<tr><td>Extra</td><td bgcolor="#FF0000">TEST 123</td><td>Extra</td><td>Test Description</td><td>Extra</td><td><a href="TEST_123.txt">txt file</a></td><td>Extra</td><td><a href="123.jpg">jpg</a></td></tr>'
+        eight_element_coin = coins_from_html(html=eight_element_html)
+        self.assertEqual(coin_txt(eight_element_coin, title=self.test_ruler), self.test_url)
+
+    def test_missing_txt(self):
+        # Case with no txt
+        no_txt_html = '<tr><td bgcolor="#FF0000">TEST 123</td><td>Test Desc</td><td>filler</td><td><a href="TEST_123.jpg">jpg file</a></td></tr>'
+        no_txt_coin = coins_from_html(html=no_txt_html)
+        self.assertIsNone(coin_txt(no_txt_coin, title=self.test_ruler))
 
 # coin_mass()
 
