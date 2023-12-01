@@ -16,6 +16,14 @@ db_info = {'db_name':os.getenv('DB_NAME', 'roman_coins'),
            'db_password':os.getenv('DB_PASSWORD', 'postgres'),
            'db_host':'db'}
 
+table_name = 'roman_coins'
+table_columns = ['ruler', 'ruler_detail', 'id', 'description', 'metal', 
+                 'mass', 'diameter', 'era', 'year', 'inscriptions', 'txt']
+column_dtypes = ['VARCHAR(30)', 'VARCHAR(1000)', 'VARCHAR(80)', 'VARCHAR(1000)', 'VARCHAR(20)', 'REAL', 
+                 'REAL', 'VARCHAR(10)', 'REAL', 'VARCHAR(100)', 'VARCHAR(105)']
+
+state_path = '/app/data/scraping_state.csv'
+
 def connect_db(db_name, db_user, db_password, db_host):
     '''Returns a connection with PostgreSQL db at path'''
     conn = psycopg2.connect(
@@ -26,11 +34,6 @@ def connect_db(db_name, db_user, db_password, db_host):
         cursor_factory=RealDictCursor)
     return conn
     
-table_name = 'roman_coins'
-table_columns = ['ruler', 'ruler_detail', 'id', 'description', 'metal', 
-                 'mass', 'diameter', 'era', 'year', 'inscriptions', 'txt']
-column_dtypes = ['VARCHAR(30)', 'VARCHAR(1000)', 'VARCHAR(80)', 'VARCHAR(1000)', 'VARCHAR(20)', 'REAL', 
-                 'REAL', 'VARCHAR(10)', 'REAL', 'VARCHAR(100)', 'VARCHAR(105)']
 
 def create_table(conn:psycopg2.extensions.connection, table:str, cols:list, dtypes:list):
     '''Creates a table based on input connection & parameters'''
@@ -322,5 +325,4 @@ def main():
     conn.close()
 
 if __name__ == '__main__':
-    state_path = '/app/data/scraping_state.csv'
     main()
