@@ -369,8 +369,39 @@ class TestCoinTxt(unittest.TestCase):
         self.assertIsNone(coin_txt(no_txt_coin, title=self.test_ruler))
 
 # coin_mass()
+class TestCoinMass(unittest.TestCase):
+
+    def test_normal_mass(self):
+        # Potential gram abbreviations
+        gram_abs = ['16.71 g.', '27.23 g,', '24.8 g.', '8.32 g.', '3.65 gr.', 
+                    '7.3 g.', '10-51 g.', '(3.80 gm).', '9.59g',]
+        for ab in gram_abs:
+            value = float(ab.split('g')[0].strip().replace('-', '.').replace('(', ''))
+            ab_html = f'''<tr><td bgcolor="#FF0000">Id</td><td>Test Description Filler filler Filler filler {ab} filler</td><td><a href='123.txt'>txt</a></td><td><a href='123.jpg'>jpg</a></td></tr>'''
+            ab_coin = coins_from_html(html=ab_html)
+            self.assertEqual(coin_mass(ab_coin), value)
+
+    def test_missing_mass(self):
+        normal_coins = coins_from_html(path='tests/test_data/test_html/normal.html')
+        missing_mass_coin = normal_coins[1]
+        self.assertEqual(coin_mass(missing_mass_coin), 0.0)
 
 # coin_diameter()
+class TestCoinDiameter(unittest.TestCase):
+
+    def test_normal_diameter(self):
+        diameter_examples = {'28.4 mm':28.4, '29mm':29.0, 'AE28mm':28.0, '17 mm,':17.0, 
+                            '18.33mm':18.33, '25.13mm,':25.13, '33 mm.':33.0}
+        for ex in diameter_examples:
+            value = diameter_examples[ex]
+            ex_html = f'''<tr><td bgcolor="#FF0000">Id</td><td>Test Description Filler filler Filler filler {ex} filler</td><td><a href='123.txt'>txt</a></td><td><a href='123.jpg'>jpg</a></td></tr>'''
+            coin = coins_from_html(html=ex_html)
+            self.assertEqual(coin_diameter(coin), value)
+
+    def test_missing_diameter(self):
+        normal_coins = coins_from_html(path='tests/test_data/test_html/normal.html')
+        missing_diameter_coin = normal_coins[2]
+        self.assertEqual(coin_diameter(missing_diameter_coin), 0.0)
 
 # coin_inscriptions()
 
