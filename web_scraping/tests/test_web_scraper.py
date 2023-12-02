@@ -1,7 +1,7 @@
 import os
 import sys
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, call
 import psycopg2
 import requests
 from bs4 import BeautifulSoup
@@ -49,10 +49,9 @@ class TestTableCreation(unittest.TestCase):
 
     def setUp(self):
         # Test table info
-        self.table_name = 'test_table'
-        self.table_columns = ['id', 'name']
-        self.dtypes = ['INTEGER', 'VARCHAR(30)']
-        self.connection = connect_db(**db_info)
+        self.table_name = table_info['name']
+        self.table_columns = table_info['columns']
+        self.dtypes = table_info['dtypes']
 
     def test_create_table_success(self):
         mock_conn = MagicMock()
@@ -63,7 +62,7 @@ class TestTableCreation(unittest.TestCase):
 
         create_table(mock_conn, self.table_name, self.table_columns, self.dtypes)
         
-        expected_command = 'CREATE TABLE IF NOT EXISTS test_table (id INTEGER, name VARCHAR(30));'
+        expected_command = 'CREATE TABLE IF NOT EXISTS test_table (ruler VARCHAR(30), mass REAL);'
         mock_cursor.execute.assert_called_with(expected_command)
         mock_cursor.__exit__.assert_called()
 
@@ -82,14 +81,13 @@ class TestTableCreation(unittest.TestCase):
         mock_cursor.execute.assert_called_once()
     
     def test_create_table_outcome(self):
-        create_table(self.connection, self.table_name, self.table_columns, self.dtypes)
-        with self.connection.cursor() as cursor:
+        conn = connect_db(**db_info)
+        create_table(conn, self.table_name, self.table_columns, self.dtypes)
+        with conn.cursor() as cursor:
             cursor.execute(f"SELECT * FROM information_schema.tables WHERE table_name = '{self.table_name}';")
             result = cursor.fetchone()
+        conn.close()
         self.assertIsNotNone(result, f'{self.table_name} was not created')
-        
-    def tearDown(self):
-        self.connection.close()
 
 # get_pages()
 class TestGetPages(unittest.TestCase):
@@ -442,9 +440,65 @@ class TestCoinsFromSoup(unittest.TestCase):
         self.assertEqual(test_coin['year'], 350)
         self.assertEqual(test_coin['inscriptions'], 'AVG,CAES')
         self.assertEqual(test_coin['txt'], 'https://www.wildwinds.com/coins/ric/test_ruler/TEST_123.txt')
-
+        self.assertEqual(len(coins), 3)
 
 # load_coins()
+class TestLoadCoins(unittest.TestCase):
+
+    def setUp(self):
+        self.coins = [{'ruler': 'Test Ruler 1', 'mass': 0.0}, 
+                      {'ruler': 'Test Ruler 2', 'mass': 2.4}]
+        self.table_name = table_info['name']
+        self.table_columns = table_info['columns']
+        self.dtypes = table_info['dtypes']
+
+    @patch('web_scraper.psycopg2.connect')
+    def test_load_coins_success(self, mock_connect):
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+        mock_connect.return_value = mock_conn
+
+        load_coins(self.coins, mock_conn, self.table_name)
+
+        expected_calls = [
+            call(f"INSERT INTO {self.table_name} (ruler, mass) VALUES (%(ruler)s, %(mass)s);", coin)
+            for coin in self.coins
+        ]
+        mock_cursor.execute.assert_has_calls(expected_calls, any_order=True)
+
+        mock_conn.commit.assert_called()
+        mock_cursor.close.assert_called()
+
+    @patch('web_scraper.psycopg2.connect')
+    def test_load_coins_failure(self, mock_connect):
+        # Mock connection and cursor with an error on execute
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+        mock_connect.return_value = mock_conn
+        mock_cursor.execute.side_effect = psycopg2.Error("Test error")
+
+        # Call the function
+        load_coins(self.coins, mock_conn, self.table_name)
+
+        # Verify rollback is called after an error
+        mock_conn.rollback.assert_called()
+
+    def test_load_coins_outcome(self):
+        conn = connect_db(**db_info)
+        create_table(conn, self.table_name, self.table_columns, self.dtypes)
+        load_coins(self.coins, conn, self.table_name, commit=False)
+        with conn.cursor() as cursor:
+            cursor.execute(f"SELECT * FROM {self.table_name};")
+            result = cursor.fetchall()
+        conn.close()
+
+        expected_row_1 = {'ruler': 'Test Ruler 1', 'mass': 0.0}
+        expected_row_2 = {'ruler': 'Test Ruler 2', 'mass': 2.4}
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0], expected_row_1)
+        self.assertEqual(result[1], expected_row_2)
 
 # check_state()
 
