@@ -1,7 +1,7 @@
 import os
 import sys
 import unittest
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import patch, MagicMock, call, mock_open
 import psycopg2
 import requests
 from bs4 import BeautifulSoup
@@ -472,17 +472,14 @@ class TestLoadCoins(unittest.TestCase):
 
     @patch('web_scraper.psycopg2.connect')
     def test_load_coins_failure(self, mock_connect):
-        # Mock connection and cursor with an error on execute
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
         mock_connect.return_value = mock_conn
         mock_cursor.execute.side_effect = psycopg2.Error("Test error")
 
-        # Call the function
         load_coins(self.coins, mock_conn, self.table_name)
 
-        # Verify rollback is called after an error
         mock_conn.rollback.assert_called()
 
     def test_load_coins_outcome(self):
@@ -501,12 +498,44 @@ class TestLoadCoins(unittest.TestCase):
         self.assertEqual(result[1], expected_row_2)
 
 # check_state()
+class TestCheckState(unittest.TestCase):
+
+    @patch('web_scraper.os.path.exists')
+    def test_missing_state(self, mock_exists):
+        mock_exists.return_value = False
+        state = check_state('dummy_path.csv')
+        self.assertIsNone(state)
+    
+    @patch('web_scraper.os.path.exists')
+    @patch('web_scraper.open', new_callable=mock_open, read_data='Scraping State')
+    def test_active_state(self, mock_file, mock_exists):
+        mock_exists.return_value = True
+        state = check_state('dummy_path.csv')
+        self.assertEqual(state, 'Scraping State')
+        
+    @patch('web_scraper.os.path.exists')
+    @patch('web_scraper.open', new_callable=mock_open, read_data='Scraping/Loading complete')
+    @patch('web_scraper.exit')
+    def test_complete_state(self, mock_exit, mock_file, mock_exists):
+        mock_exists.return_value = True
+        check_state('dummy_path.csv')
+        mock_exit.assert_called_once()
 
 # update_state()
+class TestUpdateState(unittest.TestCase):
 
-# scrape_and_load()
+    @patch('web_scraper.open', new_callable=mock_open)
+    def test_update_state(self, mock_open):
+        test_input = "test_input"
+        test_path = "test_state.csv"
 
-# main
+        update_state(test_path, test_input)
+
+        mock_open.assert_called_once_with(test_path, "a")
+        mock_file = mock_open()
+        mock_file.write.assert_called()
+        args, _ = mock_file.write.call_args
+        self.assertIn(test_input, args[0]) # Assert write called with test_input
 
 if __name__ == '__main__':
     unittest.main()
