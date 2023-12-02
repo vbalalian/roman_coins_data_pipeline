@@ -1,0 +1,35 @@
+name: Continuous Integration
+
+on: [push, pull_request]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    services:
+      test_db:
+        image: postgres:latest
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_database
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
+
+    - name: Build and run tests
+      run: |
+        docker-compose -f docker-compose.test.yml up --build -d
+        docker-compose -f docker-compose.test.yml run web_scraper pytest
+    - name: Clean up
+      run: docker-compose -f docker-compose.test.yml down
