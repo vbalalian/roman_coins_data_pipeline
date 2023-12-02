@@ -1,4 +1,7 @@
-# A (work in progress) end-to-end data pipeline project
+# Roman Coins
+## A (work in progress) end-to-end data pipeline project
+[![Continuous Integration](https://github.com/vbalalian/RomanCoins/actions/workflows/ci.yml/badge.svg)](https://github.com/vbalalian/RomanCoins/actions/workflows/ci.yml)
+
 Extracting, Loading, and Transforming data on Roman Coins gathered from wildwinds.com
 
 **Tools:** Python, PostgreSQL, Docker, FastAPI, BeautifulSoup
