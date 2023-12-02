@@ -261,7 +261,7 @@ def coins_from_soup(soup:BeautifulSoup):
 
     return coins if coins else None
 
-def load_coins(coins:list[dict] | None, conn:psycopg2.extensions.connection, table:str):
+def load_coins(coins:list[dict] | None, conn:psycopg2.extensions.connection, table:str, commit:bool=True):
     '''Loads a list of coins into a postgres table using SQL INSERT statements'''
     try:
         cur = conn.cursor()
@@ -270,7 +270,8 @@ def load_coins(coins:list[dict] | None, conn:psycopg2.extensions.connection, tab
             placeholders = ', '.join(f'%({col})s' for col in coin.keys())
             query = f'INSERT INTO {table} ({columns}) VALUES ({placeholders});'
             cur.execute(query, coin)
-        conn.commit()            
+        if commit:
+            conn.commit()            
     except psycopg2.Error as e:
         print('Load error:', e)
         conn.rollback()
