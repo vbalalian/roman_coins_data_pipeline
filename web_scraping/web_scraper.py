@@ -289,6 +289,7 @@ def check_state(path:str):
             print('Scraping already completed. Exiting.')
             exit()
         return state
+    return None
         
 def update_state(path:str, input:str):
     ''' Creates csv state file if one doesn't exist; appends it with input'''
