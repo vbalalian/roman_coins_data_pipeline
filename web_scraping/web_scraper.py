@@ -2,94 +2,76 @@
 # coding: utf-8
 
 # Import libraries
-import numpy as np
-import pandas as pd
 from time import sleep
 import requests
 from bs4 import BeautifulSoup
 import re
 import os
+import csv
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
-# Check if web_scraper has already run
-flag_file_path = '/app/data/scraping_done.txt'
-if os.path.exists(flag_file_path):
-    print('Scraping already completed. Exiting.')
-    exit()
+db_info = {'db_name':os.getenv('DB_NAME', 'roman_coins'),
+           'db_user':os.getenv('DB_USER', 'postgres'),
+           'db_password':os.getenv('DB_PASSWORD', 'postgres'),
+           'db_host':'db'}
 
-# Path to roman_coins database
-db_name = os.getenv('DB_NAME', 'roman_coins')
-db_user = os.getenv('DB_USER', 'postgres')
-db_password = os.getenv('DB_PASSWORD', 'postgres')
-db_host = 'db'
-
-# Database connection manager
-def connect_db():
-    '''Returns a connection with PostgreSQL db at path'''
-    try:
-        conn = psycopg2.connect(
-            dbname=db_name, 
-            user=db_user, 
-            password=db_password, 
-            host=db_host,
-            cursor_factory=RealDictCursor)
-    except psycopg2.Error as e:
-        print("Connection error:", e)
-    if conn:
-        return conn
-    
 table_name = 'roman_coins'
 table_columns = ['ruler', 'ruler_detail', 'id', 'description', 'metal', 
                  'mass', 'diameter', 'era', 'year', 'inscriptions', 'txt']
 column_dtypes = ['VARCHAR(30)', 'VARCHAR(1000)', 'VARCHAR(80)', 'VARCHAR(1000)', 'VARCHAR(20)', 'REAL', 
                  'REAL', 'VARCHAR(10)', 'REAL', 'VARCHAR(100)', 'VARCHAR(105)']
 
+state_path = '/app/data/scraping_state.csv'
+
+def connect_db(db_name, db_user, db_password, db_host):
+    '''Returns a connection with PostgreSQL db at path'''
+    conn = psycopg2.connect(
+        dbname=db_name, 
+        user=db_user, 
+        password=db_password, 
+        host=db_host,
+        cursor_factory=RealDictCursor)
+    return conn
+    
+
 def create_table(conn:psycopg2.extensions.connection, table:str, cols:list, dtypes:list):
     '''Creates a table based on input connection & parameters'''
-    try:
-        cur = conn.cursor()
+    with conn.cursor() as cur:
         cur.execute(f'CREATE TABLE IF NOT EXISTS {table} (' + 
                     ', '.join(f'{col} {dtype}' for col, dtype 
                                 in zip(cols, dtypes)) + ');')
-    except Exception as e:
-        print("Create Table error:", e)
-    finally:
-        cur.close()
 
-# Function to pull link roots for each "emperor" page
-def get_linkroots(page:str):
-    # Scrape link directory
-    with requests.get(page + 'i.html') as raw:
+def get_pages(page:str):
+    '''Scrapes directory for a list of (ruler) pages'''
+    url_root = page[:-6]
+    with requests.get(page) as raw:
         soup = BeautifulSoup(raw.content, 'lxml')
-
-    # Parse html data for a clean list of ruler names
     options = soup.find_all('option')
-    emperors_raw = [i.contents for i in options if i.attrs['value'] != ''][:-6]
-    emperors = []
-    for line in emperors_raw:
-        for text in line:
-            emperors.append(text.strip())
+    pages = [url_root + i.attrs['value'] for i in options if i.attrs['value'] != ''][:-6]
+    return pages
 
-    # Generate list of usable link roots for each Emperor's coin page
-    linkroots = [page + i.attrs['value'][:-6] for i in options if i.attrs['value'] != ''][:-6]
-    return linkroots
+def scrape_page(url: str):
+    '''Returns BeautifulSoup object of url'''
+    html = requests.get(url)
+    soup = BeautifulSoup(html.content, 'lxml')
+    return soup
 
-
-
-# Create helper functions for parsing data fields
-# Function for parsing names of coin subjects
 def pull_title(soup):
+    '''Returns title element (corresponding to ruler) from BeautifulSoup object'''
     raw_title = soup.find('title')
     if raw_title:
         title_text = raw_title.text
         sep_index = title_text.find(',')
         if sep_index == -1:
             sep_index = title_text.find('-')
-        return title_text[:sep_index].strip() if sep_index != -1 else title_text.strip()
+        title = title_text[:sep_index].strip() if sep_index != -1 else title_text.strip()
+        if title:
+            return title
     return None
 
 def pull_subtitle(soup):
+    '''Returns subtitle element from BeautifulSoup object'''
     # Filter function to exclude unwanted text
     def valid_subtitle(text):
         if not text or len(text) < 4:
@@ -123,13 +105,13 @@ def pull_subtitle(soup):
 
     return None
 
-# Function to pull raw coin data
 def pull_coins(soup):
+    '''Returns coins as raw BeautifulSoup objects'''
     coins = [coin.contents for coin in soup.find_all('tr') if len(coin) >2 and 'bgcolor' in str(coin)]
     return coins
 
-# Function to pull coin ids
 def coin_id(coin):
+    '''Returns ID (str) from individual coin (BeautifulSoup) object'''
     try:
         id_html = coin[0]
         id = id_html.get_text()
@@ -137,8 +119,8 @@ def coin_id(coin):
     except IndexError:
         return None
 
-# Function to pull coin descriptions
 def coin_description(coin):
+    '''Returns description (str) from coin (BeautifulSoup) object'''
     try:
         for i in range(1, 4):
             chunk = coin[i]
@@ -148,8 +130,8 @@ def coin_description(coin):
     except IndexError:
         return None
 
-# Function to identify coin metal
 def coin_metal(coin):
+    '''Returns metal/material (str) from coin (BeautifulSoup) object'''
     metals = {
         '#B87334':'Copper', '#B87333':'Copper', '#b87333':'Copper', 
         '#FFD700':'Gold', '#ffd700':'Gold', '#FFD660':'Gold', '#FFC601':'Gold', 
@@ -164,8 +146,8 @@ def coin_metal(coin):
     except:
         return None
 
-# Function to pull coin era (i.e. 'AD' or 'BC') 
 def coin_era(coin):
+    '''Returns era (i.e. 'AD' or 'BC') (str) from coin (BeautifulSoup) object'''
     description = coin_description(coin)
     try:
         match = re.search(r'\b(AD|BC)\b', description)
@@ -173,8 +155,8 @@ def coin_era(coin):
     except:
         return None
 
-# Function to pull first year in the coin description
 def coin_year(coin):
+    '''Returns a year (int) from coin (BeautifulSoup) object'''
     description = coin_description(coin)
     try:
         year_matches = re.findall(r'\b(AD|BC)\s*(\d{1,3})(?:/(\d{1,3})|-(\d' +
@@ -199,8 +181,8 @@ def coin_year(coin):
 
     return min(valid_years) if valid_years else None
 
-# Function to pull .txt urls
 def coin_txt(coin, title):
+    '''Returns .txt url (str) from coin (BeautifulSoup) object'''
     base_url = 'https://www.wildwinds.com/coins/ric/'
     for level in [2, 1, 3, 4, 5]:
         try:
@@ -212,8 +194,8 @@ def coin_txt(coin, title):
             continue
     return None
 
-# Function to pull coin mass (in grams)
 def coin_mass(coin):
+    '''Returns mass (float, in g) from coin (BeautifulSoup) object'''
     try:
         description = coin_description(coin)
         match = re.search(r'(\d+((\.|\,|\-)\d+)?)\s?(?:g|gm|gr)\b', description)
@@ -221,8 +203,8 @@ def coin_mass(coin):
     except:
         return 0.0
 
-# Function to pull coin diameter (in mm)
 def coin_diameter(coin):
+    '''Returns diameter (float, in mm) from coin (BeautifulSoup) object'''
     try:
         description = coin_description(coin)
         match = re.search(r'(\d{1,2}(\.\d+)?)\s?(?:mm)', description)
@@ -244,8 +226,8 @@ people, each renewal indicated by numerals), "CENS" (Censor, a public office
 overseeing taxes, morality, the census and membership in various orders), 
 "BRIT" (Britannicus).'''
 
-# Function to pull recognized inscriptions
 def coin_inscriptions(coin):
+    '''Returns recognized inscriptions (str:'EX1,EX2') from coin (BeautifulSoup) object'''
     inscriptions_list = ['AVG', 'IMP', 'CAES', 'GERM', 'COS', 'CONSVL', 'PP', 
                          'PO', 'PF', 'SC', 'CENS', 'TPP', 'TR', 'RESTITVT', 
                          'BRIT', 'AVGVSTVS', 'CAESAR', 'C', 'TRIB', 'POT', 'PON',
@@ -257,8 +239,8 @@ def coin_inscriptions(coin):
     except:
         return None
 
-# Function that combines previous helper functions to return coins dicts
 def coins_from_soup(soup:BeautifulSoup):
+    '''Returns a list of parsed coins as col:val dicts'''
     title = pull_title(soup)
     subtitle = pull_subtitle(soup)
     coins = []
@@ -279,14 +261,8 @@ def coins_from_soup(soup:BeautifulSoup):
 
     return coins if coins else None
 
-# Function to pull html from test pages
-def scrape_page(url_root: str):
-    url = url_root + 'i.html'
-    html = requests.get(url)
-    soup = BeautifulSoup(html.content, 'lxml')
-    return soup
-
-def load_coins(coins:list[dict] | None, conn:psycopg2.extensions.connection, table:str):
+def load_coins(coins:list[dict] | None, conn:psycopg2.extensions.connection, table:str, commit:bool=True):
+    '''Loads a list of coins into a postgres table using SQL INSERT statements'''
     try:
         cur = conn.cursor()
         for coin in coins:
@@ -294,37 +270,61 @@ def load_coins(coins:list[dict] | None, conn:psycopg2.extensions.connection, tab
             placeholders = ', '.join(f'%({col})s' for col in coin.keys())
             query = f'INSERT INTO {table} ({columns}) VALUES ({placeholders});'
             cur.execute(query, coin)
-        conn.commit()            
+        if commit:
+            conn.commit()            
     except psycopg2.Error as e:
         print('Load error:', e)
         conn.rollback()
     finally:
         cur.close()
 
-def scrape_and_load(conn:psycopg2.extensions.connection, linkroots:list[str], table:str, delay:int=30):
-    for root in linkroots:
-        print(f'requesting {root + "i.html"} ({linkroots.index(root) + 1}/{len(linkroots)})')
+def check_state(path:str):
+    '''Returns last row of csv state file if it exists, else None'''
+    if os.path.exists(path):
+        with open(path) as state_file:
+            reader = csv.reader(state_file)
+            rows = [row for row in reader]
+        state = rows[-1][0]
+        if state == 'Scraping/Loading complete':
+            print('Scraping already completed. Exiting.')
+            exit()
+        return state
+    return None
+        
+def update_state(path:str, input:str):
+    ''' Creates csv state file if one doesn't exist; appends it with input'''
+    with open(path, 'a') as state:
+        w = csv.writer(state)
+        w.writerow([input])
+
+def scrape_and_load(conn:psycopg2.extensions.connection, state_path:str | None, pages:list[str], table:str, delay:int=30):
+    '''Composite function scrapes a page for coins and loads them into postgres table'''
+    state = check_state(state_path)
+    if state is not None:
+        checkpoint = pages.index(state) + 1
+    else:
+        checkpoint = 0
+    for page in pages[checkpoint:]:
+        print(f'requesting {page} ({pages.index(page) + 1}/{len(pages)})')
         sleep(delay)
-        soup = scrape_page(root)
+        soup = scrape_page(page)
         coins = coins_from_soup(soup)
         if coins:
-            print(f'loading coins into database: {db_name} at {db_host} as {db_user}')
+            print(f'loading {len(coins)} coins into database {db_info["db_name"]} as {db_info["db_user"]}...')
             load_coins(coins, conn, table)
-    print(f'Scraping/Loading complete: {len(linkroots)} pages')
+        update_state(state_path, page)
+    message = 'Scraping/Loading complete'
+    update_state(state_path, message)
+    print(f'{message}: {len(pages)} pages')
 
-# Pull html from all source pages
 def main():
-    ''' (pulling from over 200 pages, which takes a couple hours with the 30 
-    second delay between requests)'''
-    linkroots = get_linkroots('https://www.wildwinds.com/coins/ric/')
-    with connect_db() as conn:
+    '''Scrapes, processes, and loads data from over 200 page requests, which 
+    takes a couple hours due to required 30-second delay between requests)'''
+    pages = get_pages('https://www.wildwinds.com/coins/ric/i.html')
+    with connect_db(**db_info) as conn:
         create_table(conn, table_name, table_columns, column_dtypes)
-        scrape_and_load(conn, linkroots, table_name)
+        scrape_and_load(conn, state_path, pages, table_name)
     conn.close()
-
-    # Flag web_scraping completion
-    with open(flag_file_path, 'w') as file:
-        file.write('done')
 
 if __name__ == '__main__':
     main()
