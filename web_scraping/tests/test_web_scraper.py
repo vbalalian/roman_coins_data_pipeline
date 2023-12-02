@@ -537,5 +537,60 @@ class TestUpdateState(unittest.TestCase):
         args, _ = mock_file.write.call_args
         self.assertIn(test_input, args[0]) # Assert write called with test_input
 
+# scrape_and_load()
+class TestScrapeAndLoad(unittest.TestCase):
+
+    @patch('web_scraper.scrape_page')
+    @patch('web_scraper.coins_from_soup')
+    @patch('web_scraper.load_coins')
+    @patch('web_scraper.update_state')
+    @patch('web_scraper.check_state')
+    def test_scrape_and_load(self, mock_check_state, mock_update_state, mock_load_coins, mock_coins_from_soup, mock_scrape_page):
+        mock_conn = MagicMock()
+        mock_scrape_page.return_value = MagicMock()
+        mock_coins_from_soup.return_value = [{'coin': 'data'}]
+
+        state_path = '/path/to/statefile'
+        pages = ['http://testurl.com/page1', 'http://testurl.com/page2']
+        table_name = 'test_table'
+
+        mock_check_state.side_effect = [None, 'http://testurl.com/page1']
+
+        scrape_and_load(mock_conn, state_path, pages, table_name, delay=0)
+
+        self.assertEqual(mock_scrape_page.call_count, 2)
+        mock_load_coins.assert_called_with([{'coin': 'data'}], mock_conn, table_name)
+        mock_update_state.assert_called() 
+
+# main()
+class TestMain(unittest.TestCase):
+
+    @patch('web_scraper.get_pages')
+    @patch('web_scraper.connect_db')
+    @patch('web_scraper.create_table')
+    @patch('web_scraper.scrape_and_load')
+    def test_main(self, mock_scrape_and_load, mock_create_table, mock_connect_db, mock_get_pages):
+        mock_get_pages.return_value = ['page1', 'page2', 'page3']
+        mock_conn = MagicMock()
+        mock_connect_db.return_value.__enter__.return_value = mock_conn
+
+        test_db_info = db_info
+        test_table_name = table_info['name']
+        test_table_columns = table_info['columns']
+        test_column_dtypes = table_info['dtypes']
+        test_state_path = '/test/state/path'
+
+        with patch('web_scraper.db_info', test_db_info), \
+             patch('web_scraper.table_name', test_table_name), \
+             patch('web_scraper.table_columns', test_table_columns), \
+             patch('web_scraper.column_dtypes', test_column_dtypes), \
+             patch('web_scraper.state_path', test_state_path):
+            main()
+
+        mock_get_pages.assert_called_with('https://www.wildwinds.com/coins/ric/i.html')
+        mock_connect_db.assert_called_with(**test_db_info)
+        mock_create_table.assert_called_with(mock_conn, test_table_name, test_table_columns, test_column_dtypes)
+        mock_scrape_and_load.assert_called_with(mock_conn, test_state_path, ['page1', 'page2', 'page3'], test_table_name)
+
 if __name__ == '__main__':
     unittest.main()
