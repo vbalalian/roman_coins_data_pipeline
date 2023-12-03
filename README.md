@@ -1,3 +1,5 @@
+![image](https://github.com/vbalalian/RomanCoins/assets/120220346/d7858509-8d06-4b15-9c0d-583214388469)
+
 # Roman Coins
 ## A (work in progress) end-to-end data pipeline project
 [![Continuous Integration](https://github.com/vbalalian/RomanCoins/actions/workflows/ci.yml/badge.svg)](https://github.com/vbalalian/RomanCoins/actions/workflows/ci.yml)
