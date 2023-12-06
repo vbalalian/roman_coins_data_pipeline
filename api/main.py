@@ -26,6 +26,7 @@ def get_conn():
     finally:
         conn.close()
 
+# Base root
 @app.get('/')
 async def root():
     return {
@@ -35,19 +36,24 @@ async def root():
         'documentation':'/docs'
         }
 
+# Version 1 root
 @app.get('/v1/')
 async def v1_root():
     return {
-        'message':'Welcome to the Roman Coin Data API - Version 1',
-        'status':'OK',
-        'documentation':'/docs/',
+        'message': 'Welcome to the Roman Coin Data API - Version 1',
+        'status': 'OK',
+        'documentation': '/docs/',
         'endpoints': {
-            '/v1/coins': 'Retrieve a paginated list of coins with optional sorting and filtering',
-            '/v1/coins/id/{coin_id}': 'Retrieve detailed information about a single coin by its ID',
-            '/v1/coins/search': 'Search for coins based on query'
-            }
+            '/v1/coins': 'Retrieve a paginated list of coins with optional sorting and filtering. You can filter by properties like ruler, metal, era, and more, as well as sort the results.',
+            '/v1/coins/id/{coin_id}': 'Retrieve detailed information about a single coin by its ID. This endpoint provides complete data about a specific coin.',
+            '/v1/coins/search': 'Search for coins based on a query. This allows you to find coins by matching against their descriptions or other text attributes.',
+            '/v1/coins/id/{coin_id} [POST]': 'Add a new coin to the database. This endpoint is for inserting new coin data into the collection.',
+            '/v1/coins/id/{coin_id} [PUT]': 'Fully update an existing coin’s data. This endpoint replaces all data for the specified coin. Unspecified fields in the request are set to their default values or null.',
+            '/v1/coins/id/{coin_id} [PATCH]': 'Partially update an existing coin’s data. Use this endpoint to modify specific fields without affecting the rest of the coin’s data.'
         }
+    }
 
+# Endpoint for all coins, with sorting and filtering
 @app.get('/v1/coins/')
 async def read_coins(
     db: psycopg2.extensions.connection = Depends(get_conn), 
@@ -116,7 +122,7 @@ async def read_coins(
         return [dict(row) for row in coins]
     raise HTTPException(status_code=400, detail='No matching coins found')
 
-
+# Coin Search endpoint
 @app.get('/v1/coins/search')
 async def search_coins(
     query: Annotated[list[str], Query(min_length=1, max_length=50)] = None, 
@@ -143,6 +149,7 @@ async def search_coins(
     
     raise HTTPException(status_code=400, detail='Query string is empty')
 
+# Coins by ID endpoint
 @app.get('/v1/coins/id/{coin_id}')
 async def coin_by_id(coin_id: str, db: psycopg2.extensions.connection = Depends(get_conn)):
 
@@ -161,17 +168,16 @@ async def coin_by_id(coin_id: str, db: psycopg2.extensions.connection = Depends(
     
     raise HTTPException(status_code=404, detail='Coin not found')
 
-# Coin validation
+# Coin validation model 
 class Coin(BaseModel):
     ruler: str | None = None
     ruler_detail: str | None = None
-    id: str
     description: str | None = None
     metal: str | None = None
-    mass: confloat(ge=0, le=50) = 0
-    diameter: confloat(ge=0, le=50) = 0
+    mass: confloat(ge=0, le=50) = 0.0
+    diameter: confloat(ge=0, le=50) = 0.0
     era: str = None
-    year: conint(ge=-50, le=500)
+    year: conint(ge=-50, le=500) = None
     inscriptions: str = None
     txt: str = None
 
@@ -191,8 +197,9 @@ class Coin(BaseModel):
             raise ValueError('Invalid era')
         return v.upper()
     
-@app.post('/v1/coins/', status_code=201)
-async def add_coin(coin: Coin, db: psycopg2.extensions.connection = Depends(get_conn)):
+# Add coin endpoint
+@app.post('/v1/coins/id/{coin_id}', status_code=201)
+async def add_coin(coin_id:str, coin:Coin, db: psycopg2.extensions.connection = Depends(get_conn)):
 
     # SQL for adding a Coin to the database
     insert_query = '''
@@ -204,7 +211,7 @@ async def add_coin(coin: Coin, db: psycopg2.extensions.connection = Depends(get_
     coin_data = (
         coin.ruler,
         coin.ruler_detail,
-        coin.id,
+        coin_id,
         coin.description,
         coin.metal,
         coin.mass,
@@ -227,3 +234,56 @@ async def add_coin(coin: Coin, db: psycopg2.extensions.connection = Depends(get_
         cur.close()
 
     return {"message": "Coin added successfully"}
+
+# Full coin update endpoint
+@app.put("/v1/coins/id/{coin_id}", status_code=200)
+async def update_coin(coin_id: str, coin_update: Coin, db: psycopg2.extensions.connection = Depends(get_conn)):
+    '''Updates entire row. Missing fields will reset to default values.'''
+    update_fields = coin_update.dict()
+    if not update_fields:
+        raise HTTPException(status_code=400, detail="No fields to update")
+
+    set_clause = ", ".join([f"{key} = %s" for key in update_fields.keys()])
+    values = list(update_fields.values())
+
+    update_query = f"UPDATE roman_coins SET {set_clause} WHERE id = %s"
+    values.append(coin_id)
+
+    try:
+        cur = db.cursor()
+        cur.execute(update_query, values)
+        db.commit()
+    except psycopg2.Error as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"Error updating coin: {e}")
+    finally:
+        cur.close()
+
+    return {"message": "Coin updated successfully"}
+
+# Partial coin update endpoint
+@app.patch("/v1/coins/id/{coin_id}", status_code=200)
+async def patch_coin(coin_id: str, coin_update: Coin, db: psycopg2.extensions.connection = Depends(get_conn)):
+    update_fields = coin_update.dict(exclude_unset=True)
+    if not update_fields:
+        raise HTTPException(status_code=400, detail="No fields to update")
+
+    set_clause = ", ".join([f"{key} = %s" for key in update_fields.keys()])
+    values = list(update_fields.values())
+
+    update_query = f"UPDATE roman_coins SET {set_clause} WHERE id = %s"
+    values.append(coin_id)
+
+    try:
+        cur = db.cursor()
+        cur.execute(update_query, values)
+        if cur.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Coin not found")
+        db.commit()
+    except psycopg2.Error as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"Error updating coin: {e}")
+    finally:
+        cur.close()
+
+    return {"message": "Coin updated successfully"}
