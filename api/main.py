@@ -53,6 +53,13 @@ async def v1_root():
         }
     }
 
+def validate_sort_column(sort_by:str):
+    '''Validate the sort_by parameter to ensure it's a valid column name'''
+    allowed_sort_columns = ['ruler', 'metal', 'year', 'mass', 'diameter']
+    if sort_by not in allowed_sort_columns:
+        raise HTTPException(status_code=400, detail='Invalid sort column')
+    return sort_by
+
 # Endpoint for all coins, with sorting and filtering
 @app.get('/v1/coins/')
 async def read_coins(
@@ -60,6 +67,7 @@ async def read_coins(
     page: int = 1, 
     page_size: int = 10, 
     sort_by: str = None,
+    desc: bool = False,
     ruler: str = None,
     metal: str = None,
     era: str = None,
@@ -103,6 +111,9 @@ async def read_coins(
     
     # Sorting logic
     if sort_by:
+        sort_by = validate_sort_column(sort_by)
+        if desc == True:
+            sort_by += ' DESC'
         query += f' ORDER BY {sort_by}'
 
     # Pagination logic
