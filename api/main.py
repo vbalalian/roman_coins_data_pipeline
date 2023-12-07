@@ -1,5 +1,5 @@
-from fastapi import FastAPI, Query, HTTPException, Depends
-from pydantic import BaseModel, confloat, conint, validator
+from fastapi import FastAPI, Query, Path, HTTPException, Depends
+from pydantic import BaseModel, Field, validator
 from typing import Annotated
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -136,7 +136,7 @@ async def read_coins(
 # Coin Search endpoint
 @app.get('/v1/coins/search')
 async def search_coins(
-    query: Annotated[list[str], Query(min_length=1, max_length=50)] = None, 
+    query: Annotated[str, Query(title='Query string', min_length=3, max_length=50, example="crowned by Victory")] = None, 
     db: psycopg2.extensions.connection = Depends(get_conn)
     ):
 
@@ -162,7 +162,10 @@ async def search_coins(
 
 # Coins by ID endpoint
 @app.get('/v1/coins/id/{coin_id}')
-async def coin_by_id(coin_id: str, db: psycopg2.extensions.connection = Depends(get_conn)):
+async def coin_by_id(
+    coin_id: Annotated[str, Path(title='The ID of the coin to be retrieved', example="RIC 24")], 
+    db: psycopg2.extensions.connection = Depends(get_conn)
+    ):
 
     try:
         cur = db.cursor()
@@ -181,16 +184,16 @@ async def coin_by_id(coin_id: str, db: psycopg2.extensions.connection = Depends(
 
 # Coin validation model 
 class Coin(BaseModel):
-    ruler: str | None = None
-    ruler_detail: str | None = None
-    description: str | None = None
-    metal: str | None = None
-    mass: confloat(ge=0, le=50) = 0.0
-    diameter: confloat(ge=0, le=50) = 0.0
-    era: str = None
-    year: conint(ge=-50, le=500) = None
-    inscriptions: str = None
-    txt: str = None
+    ruler: str | None = Field(default=None, title="The name of the coin's figurehead", max_length=30)
+    ruler_detail: str | None = Field(default=None, title="The subtitle/detail of the coin's figurehead", max_length=1000)
+    description: str | None = Field(default=None, title="The description of the coin", max_length=1000)
+    metal: str | None = Field(default=None, title="The metal/material composition of the coin", max_length=20)
+    mass: float = Field(ge=0.0, lt=50, default=0.0, title="The mass of the coin in grams")
+    diameter: float = Field(ge=0.0, le=50, default=0.0, title="The diameter of the coin in millimeters")
+    era: str = Field(default=None, title="The era of the coin e.g. BC or AD")
+    year: float = Field(ge=-50, le=500, default=None, title="The year associated with the coin")
+    inscriptions: str = Field(default=None, title="Recognized inscriptions found on the coin")
+    txt: str = Field(default=None, title="Filename of alternate coin information .txt")
 
     # Additional metal validation
     @validator('metal')
@@ -207,10 +210,33 @@ class Coin(BaseModel):
         if v.upper() not in valid_eras:
             raise ValueError('Invalid era')
         return v.upper()
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "ruler": "Augustus",
+                    "ruler_detail": "The first Roman Emperor, aka Octavian, adopted son of Julius Caesar",
+                    "description": "Denarius, Victory crowning an eagle / Laureate head right",
+                    "metal": "Silver",
+                    "mass": 8.1,
+                    "diameter": 10.8, 
+                    "era": "AD", 
+                    "year": 24,
+                    "inscriptions": "AVG,CAES,PON",
+                    "txt": "RIC_248.txt"
+                }
+            ]
+        }
+    }
     
 # Add coin endpoint
 @app.post('/v1/coins/id/{coin_id}', status_code=201)
-async def add_coin(coin_id:str, coin:Coin, db: psycopg2.extensions.connection = Depends(get_conn)):
+async def add_coin(
+    coin_id:Annotated[str, Path(title='The ID of the coin to be added')], 
+    coin:Coin, 
+    db: psycopg2.extensions.connection = Depends(get_conn)
+    ):
 
     # SQL for adding a Coin to the database
     insert_query = '''
@@ -248,7 +274,11 @@ async def add_coin(coin_id:str, coin:Coin, db: psycopg2.extensions.connection = 
 
 # Full coin update endpoint
 @app.put("/v1/coins/id/{coin_id}", status_code=200)
-async def update_coin(coin_id: str, coin_update: Coin, db: psycopg2.extensions.connection = Depends(get_conn)):
+async def update_coin(
+    coin_id: Annotated[str, Path(title='The ID of the coin to be updated')], 
+    coin_update: Coin, 
+    db: psycopg2.extensions.connection = Depends(get_conn)
+    ):
     '''Updates entire row. Missing fields will reset to default values.'''
     update_fields = coin_update.dict()
     if not update_fields:
@@ -274,7 +304,11 @@ async def update_coin(coin_id: str, coin_update: Coin, db: psycopg2.extensions.c
 
 # Partial coin update endpoint
 @app.patch("/v1/coins/id/{coin_id}", status_code=200)
-async def patch_coin(coin_id: str, coin_update: Coin, db: psycopg2.extensions.connection = Depends(get_conn)):
+async def patch_coin(
+    coin_id: Annotated[str, Path(title='The ID of the coin to be updated')], 
+    coin_update: Coin, 
+    db: psycopg2.extensions.connection = Depends(get_conn)
+    ):
     update_fields = coin_update.dict(exclude_unset=True)
     if not update_fields:
         raise HTTPException(status_code=400, detail="No fields to update")
