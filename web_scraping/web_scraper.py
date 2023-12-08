@@ -246,19 +246,20 @@ def coins_from_soup(soup:BeautifulSoup):
     subtitle = pull_subtitle(soup)
     coins = []
     for coin in pull_coins(soup):
-        coins.append({
-            'ruler':title,
-            'ruler_detail':subtitle,
-            'id':coin_id(coin),
-            'description':coin_description(coin),
-            'metal':coin_metal(coin),
-            'mass':coin_mass(coin),
-            'diameter':coin_diameter(coin),
-            'era':coin_era(coin),
-            'year':coin_year(coin),
-            'inscriptions':coin_inscriptions(coin),
-            'txt':coin_txt(coin, title=title)
-        })
+        if coin_id(coin):
+            coins.append({
+                'ruler':title,
+                'ruler_detail':subtitle,
+                'id':coin_id(coin),
+                'description':coin_description(coin),
+                'metal':coin_metal(coin),
+                'mass':coin_mass(coin),
+                'diameter':coin_diameter(coin),
+                'era':coin_era(coin),
+                'year':coin_year(coin),
+                'inscriptions':coin_inscriptions(coin),
+                'txt':coin_txt(coin, title=title)
+            })
 
     return coins if coins else None
 
