@@ -5,6 +5,7 @@ from unittest.mock import patch, MagicMock, call, mock_open
 import psycopg2
 import requests
 from bs4 import BeautifulSoup
+import datetime
 # Add cwd to path
 sys.path.append(os.getcwd())
 from web_scraper import (connect_db, create_table, get_pages, scrape_page, 
@@ -241,6 +242,11 @@ class TestPullCoins(unittest.TestCase):
         response = pull_coins(soup)
         self.assertEqual(len(response), 0)
 
+# coin_id()
+def test_coin_id():
+    id = coin_id()
+    assert len(id) == 36
+
 # Helper function
 def coins_from_html(path:str = None, html:str = None):
     if path:
@@ -440,6 +446,8 @@ class TestCoinsFromSoup(unittest.TestCase):
         self.assertEqual(test_coin['year'], 350)
         self.assertEqual(test_coin['inscriptions'], 'AVG,CAES')
         self.assertEqual(test_coin['txt'], 'https://www.wildwinds.com/coins/ric/test_ruler/TEST_123.txt')
+        self.assertIsInstance(test_coin['created'], datetime.datetime)
+        self.assertIsNone(test_coin['modified'])
         self.assertEqual(len(coins), 3)
 
 # load_coins()
