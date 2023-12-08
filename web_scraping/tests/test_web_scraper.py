@@ -8,11 +8,11 @@ from bs4 import BeautifulSoup
 # Add cwd to path
 sys.path.append(os.getcwd())
 from web_scraper import (connect_db, create_table, get_pages, scrape_page, 
-                         pull_title, pull_subtitle, pull_coins, coin_id,
-                         coin_description, coin_metal, coin_era, coin_year,
-                         coin_txt, coin_mass, coin_diameter, coin_inscriptions,
-                         coins_from_soup, load_coins, check_state, 
-                         update_state, scrape_and_load, main)
+                         pull_title, pull_subtitle, pull_coins, coin_id, 
+                         coin_catalog, coin_description, coin_metal, coin_era, 
+                         coin_year, coin_txt, coin_mass, coin_diameter, 
+                         coin_inscriptions, coins_from_soup, load_coins, 
+                         check_state, update_state, scrape_and_load, main)
 
 # Test database variables
 db_info = {'db_name':'test_database',
@@ -252,19 +252,19 @@ def coins_from_html(path:str = None, html:str = None):
         return coins[0]
     return coins 
 
-# coin_id()
-class TestCoinID(unittest.TestCase):
+# coin_catalog()
+class TestCoinCatalog(unittest.TestCase):
     
-    def test_normal_id(self):
+    def test_normal_catalog(self):
         normal_coins = coins_from_html(path='tests/test_data/test_html/normal.html')
-        self.assertEqual(coin_id(normal_coins[0]), 'TEST 123')
-        self.assertEqual(coin_id(normal_coins[1]), 'TEST 124')
-        self.assertEqual(coin_id(normal_coins[2]), 'TEST 125')
+        self.assertEqual(coin_catalog(normal_coins[0]), 'TEST 123')
+        self.assertEqual(coin_catalog(normal_coins[1]), 'TEST 124')
+        self.assertEqual(coin_catalog(normal_coins[2]), 'TEST 125')
 
-    def test_missing_id(self):
-        missing_id_html_path = 'tests/test_data/test_html/missing_id.html'
-        missing_id_coin = coins_from_html(path=missing_id_html_path)
-        self.assertIsNone(coin_id(missing_id_coin))
+    def test_missing_catalog(self):
+        missing_catalog_html_path = 'tests/test_data/test_html/missing_catalog.html'
+        missing_catalog_coin = coins_from_html(path=missing_catalog_html_path)
+        self.assertIsNone(coin_catalog(missing_catalog_coin))
         
 # coin_description()
 class TestCoinDescription(unittest.TestCase):
@@ -431,7 +431,7 @@ class TestCoinsFromSoup(unittest.TestCase):
         test_coin = coins[0]
         self.assertEqual(test_coin['ruler'], 'Test Ruler')
         self.assertEqual(test_coin['ruler_detail'], 'Test Subtitle')
-        self.assertEqual(test_coin['id'], 'TEST 123')
+        self.assertEqual(test_coin['catalog'], 'TEST 123')
         self.assertEqual(test_coin['description'], 'Test Description AD 350 28mm, 8.24g. AVG CAES filler')
         self.assertEqual(test_coin['metal'], 'Copper')
         self.assertEqual(test_coin['mass'], 8.24)
