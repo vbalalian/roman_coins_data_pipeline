@@ -19,8 +19,8 @@ db_info = {'db_name':os.getenv('DB_NAME', 'roman_coins'),
 table_name = 'roman_coins'
 table_columns = ['ruler', 'ruler_detail', 'id', 'description', 'metal', 
                  'mass', 'diameter', 'era', 'year', 'inscriptions', 'txt']
-column_dtypes = ['VARCHAR(30)', 'VARCHAR(1000)', 'VARCHAR(80)', 'VARCHAR(1000)', 'VARCHAR(20)', 'REAL', 
-                 'REAL', 'VARCHAR(10)', 'REAL', 'VARCHAR(100)', 'VARCHAR(105)']
+column_dtypes = ['VARCHAR(30)', 'VARCHAR(1000)', 'VARCHAR(80)', 'VARCHAR(1000)', 'VARCHAR(20)', 
+                 'REAL', 'REAL', 'VARCHAR(5)', 'INTEGER', 'VARCHAR(100)', 'VARCHAR(105)']
 
 state_path = '/app/data/scraping_state.csv'
 
@@ -199,9 +199,10 @@ def coin_mass(coin):
     try:
         description = coin_description(coin)
         match = re.search(r'(\d+((\.|\,|\-)\d+)?)\s?(?:g|gm|gr)\b', description)
-        return float(match.group(1).replace(',', '.').replace('-', '.'))
+        mass = float(match.group(1).replace(',', '.').replace('-', '.'))
+        return mass if mass <= 50 else None
     except:
-        return 0.0
+        return None
 
 def coin_diameter(coin):
     '''Returns diameter (float, in mm) from coin (BeautifulSoup) object'''
@@ -209,9 +210,9 @@ def coin_diameter(coin):
         description = coin_description(coin)
         match = re.search(r'(\d{1,2}(\.\d+)?)\s?(?:mm)', description)
         diameter = float(match.group(1))
-        return diameter if diameter else 0
+        return diameter if diameter <= 50 else None
     except:
-        return 0.0
+        return None
 
 # Check for common inscriptions
 ''' ...such as "AVG" (Augustus, title of the emperor), "IMP" (Imperator 
