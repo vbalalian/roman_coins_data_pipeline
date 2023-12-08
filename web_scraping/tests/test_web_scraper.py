@@ -381,7 +381,7 @@ class TestCoinMass(unittest.TestCase):
     def test_missing_mass(self):
         normal_coins = coins_from_html(path='tests/test_data/test_html/normal.html')
         missing_mass_coin = normal_coins[1]
-        self.assertEqual(coin_mass(missing_mass_coin), 0.0)
+        self.assertEqual(coin_mass(missing_mass_coin), None)
 
 # coin_diameter()
 class TestCoinDiameter(unittest.TestCase):
@@ -398,7 +398,7 @@ class TestCoinDiameter(unittest.TestCase):
     def test_missing_diameter(self):
         normal_coins = coins_from_html(path='tests/test_data/test_html/normal.html')
         missing_diameter_coin = normal_coins[2]
-        self.assertEqual(coin_diameter(missing_diameter_coin), 0.0)
+        self.assertEqual(coin_diameter(missing_diameter_coin), None)
 
 # coin_inscriptions()
 class TestCoinInscriptions(unittest.TestCase):
