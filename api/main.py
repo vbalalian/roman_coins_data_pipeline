@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Query, Path, HTTPException, Depends
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, validator
 from typing import Annotated
 import psycopg2
@@ -28,18 +29,18 @@ def get_conn():
 
 # Base root
 @app.get('/')
-async def root():
-    return {
+async def root() -> JSONResponse:
+    return JSONResponse(content={
         'message':'Welcome to the Roman Coin Data API',
         'status':'OK',
         'available_versions':['/v1/'],
         'documentation':'/docs'
-        }
+        })
 
 # Version 1 root
 @app.get('/v1/')
-async def v1_root():
-    return {
+async def v1_root() -> JSONResponse:
+    return JSONResponse(content={
         'message': 'Welcome to the Roman Coin Data API - Version 1',
         'status': 'OK',
         'documentation': '/docs/',
@@ -51,6 +52,78 @@ async def v1_root():
             '/v1/coins/id/{coin_id} [PUT]': 'Fully update an existing coin’s data. This endpoint replaces all data for the specified coin. Unspecified fields in the request are set to their default values or null.',
             '/v1/coins/id/{coin_id} [PATCH]': 'Partially update an existing coin’s data. Use this endpoint to modify specific fields without affecting the rest of the coin’s data.'
         }
+    })
+
+# Coin validation models
+class CoinDetails(BaseModel):
+    ruler: str | None = Field(default=None, title="The name of the coin's figurehead", max_length=30)
+    ruler_detail: str | None = Field(default=None, title="The subtitle/detail of the coin's figurehead", max_length=1000)
+    description: str | None = Field(default=None, title="The description of the coin", max_length=1000)
+    metal: str | None = Field(default=None, title="The metal/material composition of the coin", max_length=20)
+    mass: float | None = Field(ge=0.0, lt=50, default=0.0, title="The mass of the coin in grams")
+    diameter: float | None = Field(ge=0.0, le=50, default=0.0, title="The diameter of the coin in millimeters")
+    era: str | None = Field(default=None, title="The era of the coin e.g. BC or AD")
+    year: int | None = Field(ge=-50, le=500, default=None, title="The year associated with the coin")
+    inscriptions: str | None = Field(default=None, title="Recognized inscriptions found on the coin")
+    txt: str | None = Field(default=None, title="Filename of alternate coin information .txt")
+
+    # Additional metal validation
+    @validator('metal')
+    def validate_metal(cls, v):
+        valid_metals = ['Gold', 'Silver', 'Copper', 'Bronze', 'Lead', 'Bone', 'Fake']
+        if v:
+            if v.title() not in valid_metals:
+                raise ValueError('Invalid metal')
+            return v.title()
+    
+    # Additional era validation
+    @validator('era')
+    def validate_era(cls, v):
+        valid_eras = ['BC', 'AD']
+        if v:
+            if v.upper() not in valid_eras:
+                raise ValueError('Invalid era')
+            return v.upper()
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "ruler": "Augustus",
+                    "ruler_detail": "The first Roman Emperor, aka Octavian, adopted son of Julius Caesar",
+                    "description": "Denarius, Victory crowning an eagle / Laureate head right",
+                    "metal": "Silver",
+                    "mass": 8.1,
+                    "diameter": 10.8, 
+                    "era": "AD", 
+                    "year": 24,
+                    "inscriptions": "AVG,CAES,PON",
+                    "txt": "RIC_248.txt"
+                }
+            ]
+        }
+    }
+
+class Coin(CoinDetails):
+    id: str = Field(title="The coin's ID", max_length=80)
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "ruler": "Augustus",
+                    "ruler_detail": "The first Roman Emperor, aka Octavian, adopted son of Julius Caesar",
+                    "id": "RIC 12345",
+                    "description": "Denarius, Victory crowning an eagle / Laureate head right",
+                    "metal": "Silver",
+                    "mass": 8.1,
+                    "diameter": 10.8, 
+                    "era": "AD", 
+                    "year": 24,
+                    "inscriptions": "AVG,CAES,PON",
+                    "txt": "RIC_12345.txt"
+                }
+            ]
+        }
     }
 
 def validate_sort_column(sort_by:str):
@@ -61,7 +134,7 @@ def validate_sort_column(sort_by:str):
     return sort_by
 
 # Endpoint for all coins, with sorting and filtering
-@app.get('/v1/coins/')
+@app.get('/v1/coins/', response_model=list[Coin], response_model_exclude_none=True)
 async def read_coins(
     db: psycopg2.extensions.connection = Depends(get_conn), 
     page: int = 1, 
@@ -136,9 +209,9 @@ async def read_coins(
 # Coin Search endpoint
 @app.get('/v1/coins/search')
 async def search_coins(
-    query: Annotated[str, Query(title='Query string', min_length=3, max_length=50, example="crowned by Victory")] = None, 
+    query: Annotated[str, Query(title='Query string', min_length=3, max_length=50, example="crowned by Victory")], 
     db: psycopg2.extensions.connection = Depends(get_conn)
-    ):
+    ) -> list[Coin]:
 
     if query:
 
@@ -165,7 +238,7 @@ async def search_coins(
 async def coin_by_id(
     coin_id: Annotated[str, Path(title='The ID of the coin to be retrieved', example="RIC 24")], 
     db: psycopg2.extensions.connection = Depends(get_conn)
-    ):
+    ) -> Coin:
 
     try:
         cur = db.cursor()
@@ -181,62 +254,14 @@ async def coin_by_id(
         cur.close()
     
     raise HTTPException(status_code=404, detail='Coin not found')
-
-# Coin validation model 
-class Coin(BaseModel):
-    ruler: str | None = Field(default=None, title="The name of the coin's figurehead", max_length=30)
-    ruler_detail: str | None = Field(default=None, title="The subtitle/detail of the coin's figurehead", max_length=1000)
-    description: str | None = Field(default=None, title="The description of the coin", max_length=1000)
-    metal: str | None = Field(default=None, title="The metal/material composition of the coin", max_length=20)
-    mass: float = Field(ge=0.0, lt=50, default=0.0, title="The mass of the coin in grams")
-    diameter: float = Field(ge=0.0, le=50, default=0.0, title="The diameter of the coin in millimeters")
-    era: str = Field(default=None, title="The era of the coin e.g. BC or AD")
-    year: float = Field(ge=-50, le=500, default=None, title="The year associated with the coin")
-    inscriptions: str = Field(default=None, title="Recognized inscriptions found on the coin")
-    txt: str = Field(default=None, title="Filename of alternate coin information .txt")
-
-    # Additional metal validation
-    @validator('metal')
-    def validate_metal(cls, v):
-        valid_metals = ['Gold', 'Silver', 'Copper', 'Bronze', 'Lead', 'Bone', 'FAKE']
-        if v.title() not in valid_metals:
-            raise ValueError('Invalid metal')
-        return v.title()
-    
-    # Additional era validation
-    @validator('era')
-    def validate_era(cls, v):
-        valid_eras = ['BC', 'AD']
-        if v.upper() not in valid_eras:
-            raise ValueError('Invalid era')
-        return v.upper()
-
-    model_config = {
-        "json_schema_extra": {
-            "examples": [
-                {
-                    "ruler": "Augustus",
-                    "ruler_detail": "The first Roman Emperor, aka Octavian, adopted son of Julius Caesar",
-                    "description": "Denarius, Victory crowning an eagle / Laureate head right",
-                    "metal": "Silver",
-                    "mass": 8.1,
-                    "diameter": 10.8, 
-                    "era": "AD", 
-                    "year": 24,
-                    "inscriptions": "AVG,CAES,PON",
-                    "txt": "RIC_248.txt"
-                }
-            ]
-        }
-    }
     
 # Add coin endpoint
 @app.post('/v1/coins/id/{coin_id}', status_code=201)
 async def add_coin(
     coin_id:Annotated[str, Path(title='The ID of the coin to be added')], 
-    coin:Coin, 
+    coin_details:CoinDetails, 
     db: psycopg2.extensions.connection = Depends(get_conn)
-    ):
+    ) -> JSONResponse:
 
     # SQL for adding a Coin to the database
     insert_query = '''
@@ -246,17 +271,17 @@ async def add_coin(
 
     # Data to be inserted
     coin_data = (
-        coin.ruler,
-        coin.ruler_detail,
+        coin_details.ruler,
+        coin_details.ruler_detail,
         coin_id,
-        coin.description,
-        coin.metal,
-        coin.mass,
-        coin.diameter,
-        coin.era,
-        coin.year,
-        coin.inscriptions,
-        coin.txt
+        coin_details.description,
+        coin_details.metal,
+        coin_details.mass,
+        coin_details.diameter,
+        coin_details.era,
+        coin_details.year,
+        coin_details.inscriptions,
+        coin_details.txt
     )
 
     # Execute the query
@@ -270,7 +295,7 @@ async def add_coin(
     finally:
         cur.close()
 
-    return {"message": "Coin added successfully"}
+    return JSONResponse(content={"message": "Coin added successfully"})
 
 # Full coin update endpoint
 @app.put("/v1/coins/id/{coin_id}", status_code=200)
@@ -278,7 +303,7 @@ async def update_coin(
     coin_id: Annotated[str, Path(title='The ID of the coin to be updated')], 
     coin_update: Coin, 
     db: psycopg2.extensions.connection = Depends(get_conn)
-    ):
+    ) -> JSONResponse:
     '''Updates entire row. Missing fields will reset to default values.'''
     update_fields = coin_update.dict()
     if not update_fields:
@@ -300,7 +325,7 @@ async def update_coin(
     finally:
         cur.close()
 
-    return {"message": "Coin updated successfully"}
+    return JSONResponse(content={"message": "Coin updated successfully"})
 
 # Partial coin update endpoint
 @app.patch("/v1/coins/id/{coin_id}", status_code=200)
@@ -308,7 +333,7 @@ async def patch_coin(
     coin_id: Annotated[str, Path(title='The ID of the coin to be updated')], 
     coin_update: Coin, 
     db: psycopg2.extensions.connection = Depends(get_conn)
-    ):
+    ) -> JSONResponse:
     update_fields = coin_update.dict(exclude_unset=True)
     if not update_fields:
         raise HTTPException(status_code=400, detail="No fields to update")
@@ -331,4 +356,4 @@ async def patch_coin(
     finally:
         cur.close()
 
-    return {"message": "Coin updated successfully"}
+    return JSONResponse(content={"message": "Coin updated successfully"})
