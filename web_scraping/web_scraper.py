@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# Import libraries
 from time import sleep
 import requests
 from bs4 import BeautifulSoup
@@ -10,6 +9,8 @@ import os
 import csv
 import psycopg2
 from psycopg2.extras import RealDictCursor
+import datetime
+import uuid
 
 db_info = {'db_name':os.getenv('DB_NAME', 'roman_coins'),
            'db_user':os.getenv('DB_USER', 'postgres'),
@@ -17,10 +18,14 @@ db_info = {'db_name':os.getenv('DB_NAME', 'roman_coins'),
            'db_host':'db'}
 
 table_name = 'roman_coins'
-table_columns = ['ruler', 'ruler_detail', 'id', 'description', 'metal', 
-                 'mass', 'diameter', 'era', 'year', 'inscriptions', 'txt']
-column_dtypes = ['VARCHAR(30)', 'VARCHAR(1000)', 'VARCHAR(80)', 'VARCHAR(1000)', 'VARCHAR(20)', 
-                 'REAL', 'REAL', 'VARCHAR(5)', 'INTEGER', 'VARCHAR(100)', 'VARCHAR(105)']
+table_columns = ['id', 'ruler', 'ruler_detail', 'catalog', 'description', 
+                 'metal', 'mass', 'diameter', 'era', 'year', 'inscriptions', 
+                 'txt', 'created', 'modified']
+column_dtypes = [
+    'VARCHAR(50) PRIMARY KEY', 'VARCHAR(30)', 'VARCHAR(1000)', 'VARCHAR(80)', 'VARCHAR(1000)', 
+    'VARCHAR(20)', 'REAL', 'REAL', 'VARCHAR(5)', 'INTEGER', 'VARCHAR(100)', 
+    'VARCHAR(105)', 'TIMESTAMP', 'TIMESTAMP'
+    ]
 
 state_path = '/app/data/scraping_state.csv'
 
@@ -110,12 +115,15 @@ def pull_coins(soup):
     coins = [coin.contents for coin in soup.find_all('tr') if len(coin) >2 and 'bgcolor' in str(coin)]
     return coins
 
-def coin_id(coin):
-    '''Returns ID (str) from individual coin (BeautifulSoup) object'''
+def coin_id():
+    return str(uuid.uuid4())
+
+def coin_catalog(coin):
+    '''Returns catalog information (str) from individual coin (BeautifulSoup) object'''
     try:
-        id_html = coin[0]
-        id = id_html.get_text()
-        return id if id else None
+        catalog_html = coin[0]
+        catalog = catalog_html.get_text()
+        return catalog if catalog else None
     except IndexError:
         return None
 
@@ -246,11 +254,12 @@ def coins_from_soup(soup:BeautifulSoup):
     subtitle = pull_subtitle(soup)
     coins = []
     for coin in pull_coins(soup):
-        if coin_id(coin):
+        if coin_description(coin):
             coins.append({
+                'id':coin_id(),
                 'ruler':title,
                 'ruler_detail':subtitle,
-                'id':coin_id(coin),
+                'catalog':coin_catalog(coin),
                 'description':coin_description(coin),
                 'metal':coin_metal(coin),
                 'mass':coin_mass(coin),
@@ -258,7 +267,9 @@ def coins_from_soup(soup:BeautifulSoup):
                 'era':coin_era(coin),
                 'year':coin_year(coin),
                 'inscriptions':coin_inscriptions(coin),
-                'txt':coin_txt(coin, title=title)
+                'txt':coin_txt(coin, title=title),
+                'created':datetime.datetime.now(),
+                'modified':None
             })
 
     return coins if coins else None

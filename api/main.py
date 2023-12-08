@@ -5,6 +5,7 @@ from typing import Annotated
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import os
+from datetime import datetime
 
 # Path to roman_coins database
 db_name = os.getenv('DB_NAME')
@@ -58,6 +59,7 @@ async def v1_root() -> JSONResponse:
 class CoinDetails(BaseModel):
     ruler: str | None = Field(default=None, title="The name of the coin's figurehead", max_length=30)
     ruler_detail: str | None = Field(default=None, title="The subtitle/detail of the coin's figurehead", max_length=1000)
+    catalog: str | None = Field(default=None, title="The catalog info associated with the coin", max_length=80)
     description: str | None = Field(default=None, title="The description of the coin", max_length=1000)
     metal: str | None = Field(default=None, title="The metal/material composition of the coin", max_length=20)
     mass: float | None = Field(ge=0.0, lt=50, default=0.0, title="The mass of the coin in grams")
@@ -92,6 +94,7 @@ class CoinDetails(BaseModel):
                     "ruler": "Augustus",
                     "ruler_detail": "The first Roman Emperor, aka Octavian, adopted son of Julius Caesar",
                     "description": "Denarius, Victory crowning an eagle / Laureate head right",
+                    "catalog": "RIC 248",
                     "metal": "Silver",
                     "mass": 8.1,
                     "diameter": 10.8, 
@@ -105,14 +108,17 @@ class CoinDetails(BaseModel):
     }
 
 class Coin(CoinDetails):
-    id: str = Field(title="The coin's ID", max_length=80)
+    id: str = Field(title="The coin's ID", max_length=50)
+    created: datetime | None = Field(default=None, title="Date and Time the row was created")
+    modified: datetime | None = Field(default=None, title="Date and Time the row was modified")
     model_config = {
         "json_schema_extra": {
             "examples": [
                 {
+                    "id": "f351566b-7f7b-4ff6-9d90-aac9a09045db",
                     "ruler": "Augustus",
                     "ruler_detail": "The first Roman Emperor, aka Octavian, adopted son of Julius Caesar",
-                    "id": "RIC 12345",
+                    "catalog": "RIC 248",
                     "description": "Denarius, Victory crowning an eagle / Laureate head right",
                     "metal": "Silver",
                     "mass": 8.1,
@@ -120,7 +126,9 @@ class Coin(CoinDetails):
                     "era": "AD", 
                     "year": 24,
                     "inscriptions": "AVG,CAES,PON",
-                    "txt": "RIC_12345.txt"
+                    "txt": "RIC_248.txt",
+                    "created": "2023-12-08 14:33:06.176375",
+                    "modified": "2023-12-08 14:34:06.176375"
                 }
             ]
         }
@@ -207,7 +215,7 @@ async def read_coins(
     raise HTTPException(status_code=400, detail='No matching coins found')
 
 # Coin Search endpoint
-@app.get('/v1/coins/search')
+@app.get('/v1/coins/search', response_model=list[Coin], response_model_exclude_none=True)
 async def search_coins(
     query: Annotated[str, Query(title='Query string', min_length=3, max_length=50, example="crowned by Victory")], 
     db: psycopg2.extensions.connection = Depends(get_conn)
@@ -234,9 +242,9 @@ async def search_coins(
     raise HTTPException(status_code=400, detail='Query string is empty')
 
 # Coins by ID endpoint
-@app.get('/v1/coins/id/{coin_id}')
+@app.get('/v1/coins/id/{coin_id}', response_model=Coin, response_model_exclude_none=True)
 async def coin_by_id(
-    coin_id: Annotated[str, Path(title='The ID of the coin to be retrieved', example="RIC 24")], 
+    coin_id: Annotated[str, Path(title='The ID of the coin to be retrieved', example="64c3075e-2b01-4b09-a4f0-07be61f7f9b7")], 
     db: psycopg2.extensions.connection = Depends(get_conn)
     ) -> Coin:
 
@@ -265,15 +273,16 @@ async def add_coin(
 
     # SQL for adding a Coin to the database
     insert_query = '''
-    INSERT INTO roman_coins (ruler, ruler_detail, id, description, metal, mass, diameter, era, year, inscriptions, txt)
-    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    INSERT INTO roman_coins (id, ruler, ruler_detail, catalog, description, metal, mass, diameter, era, year, inscriptions, txt, created, modified)
+    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     '''
 
     # Data to be inserted
     coin_data = (
+        coin_id,
         coin_details.ruler,
         coin_details.ruler_detail,
-        coin_id,
+        coin_details.catalog,
         coin_details.description,
         coin_details.metal,
         coin_details.mass,
@@ -281,7 +290,9 @@ async def add_coin(
         coin_details.era,
         coin_details.year,
         coin_details.inscriptions,
-        coin_details.txt
+        coin_details.txt,
+        datetime.now(),
+        None
     )
 
     # Execute the query
@@ -301,13 +312,14 @@ async def add_coin(
 @app.put("/v1/coins/id/{coin_id}", status_code=200)
 async def update_coin(
     coin_id: Annotated[str, Path(title='The ID of the coin to be updated')], 
-    coin_update: Coin, 
+    coin_update: CoinDetails, 
     db: psycopg2.extensions.connection = Depends(get_conn)
     ) -> JSONResponse:
     '''Updates entire row. Missing fields will reset to default values.'''
-    update_fields = coin_update.dict()
+    update_fields = coin_update.model_dump()
     if not update_fields:
         raise HTTPException(status_code=400, detail="No fields to update")
+    update_fields["modified"] = datetime.now()
 
     set_clause = ", ".join([f"{key} = %s" for key in update_fields.keys()])
     values = list(update_fields.values())
@@ -331,12 +343,13 @@ async def update_coin(
 @app.patch("/v1/coins/id/{coin_id}", status_code=200)
 async def patch_coin(
     coin_id: Annotated[str, Path(title='The ID of the coin to be updated')], 
-    coin_update: Coin, 
+    coin_update: CoinDetails, 
     db: psycopg2.extensions.connection = Depends(get_conn)
     ) -> JSONResponse:
-    update_fields = coin_update.dict(exclude_unset=True)
+    update_fields = coin_update.model_dump(exclude_unset=True)
     if not update_fields:
         raise HTTPException(status_code=400, detail="No fields to update")
+    update_fields["modified"] = datetime.now()
 
     set_clause = ", ".join([f"{key} = %s" for key in update_fields.keys()])
     values = list(update_fields.values())
