@@ -236,8 +236,10 @@ async def search_coins(
             print('Search error:', e)
         finally:
             cur.close()
-
-        return [dict(row) for row in search_result]
+        try:
+            return [dict(row) for row in search_result]
+        except UnboundLocalError:
+            raise HTTPException(status_code=400, detail='No matching coins found')
     
     raise HTTPException(status_code=400, detail='Query string is empty')
 
