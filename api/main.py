@@ -134,6 +134,17 @@ class Coin(CoinDetails):
         }
     }
 
+# Pagination models
+class Pagination(BaseModel):
+    total_items: int
+    total_pages: int
+    current_page: int
+    items_per_page: int
+
+class PaginatedResponse(BaseModel):
+    data: list[Coin]
+    pagination: Pagination
+
 def validate_sort_column(sort_by:str):
     '''Validate the sort_by parameter to ensure it's a valid column name'''
     allowed_sort_columns = ['ruler', 'metal', 'year', 'mass', 'diameter']
@@ -142,7 +153,7 @@ def validate_sort_column(sort_by:str):
     return sort_by
 
 # Endpoint for all coins, with sorting and filtering
-@app.get('/v1/coins/', response_model=list[Coin], response_model_exclude_none=True)
+@app.get('/v1/coins/', response_model=PaginatedResponse, response_model_exclude_none=True)
 async def read_coins(
     db: psycopg2.extensions.connection = Depends(get_conn), 
     page: int = 1, 
@@ -182,13 +193,14 @@ async def read_coins(
         'max_diameter':('diameter', '<=', max_diameter)
     }
 
+
     # Filtering logic
     try:
         filter_clauses = [(f'{col} {op} %s', val) for col, op, val in filter_mappings.values() if val is not None]
         conditions, params = [list(a) for a in zip(*filter_clauses)]
         query += ' WHERE ' + ' AND '.join(conditions)
     except:
-        params = []
+        conditions, params = [], []
     
     # Sorting logic
     if sort_by:
@@ -197,22 +209,44 @@ async def read_coins(
             sort_by += ' DESC'
         query += f' ORDER BY {sort_by}'
 
-    # Pagination logic
-    query += ' LIMIT %s OFFSET %s'
-    params += [page_size, (page - 1) * page_size]
-
-    # Execute query
     try:
-        cur = db.cursor()
-        cur.execute(query, params)
-        coins = cur.fetchall()
+        with db.cursor() as cur:
+            # Count total items
+            count_query = 'SELECT COUNT(*) FROM roman_coins'
+            if conditions:
+                count_query += ' WHERE ' + ' AND '.join(conditions)
+
+            cur.execute(count_query, params)
+            total_items = cur.fetchone()['count']
+
+            # Pagination logic
+            query += ' LIMIT %s OFFSET %s'
+            params += [page_size, (page - 1) * page_size]
+
+            # Execute main query
+            cur.execute(query, params)
+            coins = cur.fetchall()
+        
+        # Calculate pagination metadata
+        total_pages = total_items // page_size + (total_items % page_size > 0)
+        pagination = Pagination(
+            total_items=total_items,
+            total_pages=total_pages,
+            current_page=page,
+            items_per_page=page_size
+        )
+
         if coins:
-            return [dict(row) for row in coins]
+            return PaginatedResponse(
+                data = [dict(row) for row in coins],
+                pagination=pagination
+            )
+        else:
+            raise HTTPException(status_code=400, detail='No matching coins found')
+            
     except psycopg2.Error as e:
-        print('Read error:', e)
-    finally:
-        cur.close()
-    raise HTTPException(status_code=400, detail='No matching coins found')
+        print('Database error:', e)
+        raise HTTPException(status_code=500, detail='Internal Server Error')
 
 # Coin Search endpoint
 @app.get('/v1/coins/search', response_model=list[Coin], response_model_exclude_none=True)
