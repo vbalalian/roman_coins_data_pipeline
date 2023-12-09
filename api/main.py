@@ -206,12 +206,12 @@ async def read_coins(
         cur = db.cursor()
         cur.execute(query, params)
         coins = cur.fetchall()
+        if coins:
+            return [dict(row) for row in coins]
     except psycopg2.Error as e:
         print('Read error:', e)
     finally:
         cur.close()
-    if coins:
-        return [dict(row) for row in coins]
     raise HTTPException(status_code=400, detail='No matching coins found')
 
 # Coin Search endpoint
