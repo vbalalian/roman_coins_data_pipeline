@@ -255,6 +255,7 @@ def coins_from_soup(soup:BeautifulSoup):
     coins = []
     for coin in pull_coins(soup):
         if coin_description(coin):
+            current_datetime = datetime.datetime.now()
             coins.append({
                 'id':coin_id(),
                 'ruler':title,
@@ -268,8 +269,8 @@ def coins_from_soup(soup:BeautifulSoup):
                 'year':coin_year(coin),
                 'inscriptions':coin_inscriptions(coin),
                 'txt':coin_txt(coin, title=title),
-                'created':datetime.datetime.now(),
-                'modified':None
+                'created':current_datetime,
+                'modified':current_datetime
             })
 
     return coins if coins else None

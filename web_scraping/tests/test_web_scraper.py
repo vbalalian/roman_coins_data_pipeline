@@ -447,7 +447,7 @@ class TestCoinsFromSoup(unittest.TestCase):
         self.assertEqual(test_coin['inscriptions'], 'AVG,CAES')
         self.assertEqual(test_coin['txt'], 'https://www.wildwinds.com/coins/ric/test_ruler/TEST_123.txt')
         self.assertIsInstance(test_coin['created'], datetime.datetime)
-        self.assertIsNone(test_coin['modified'])
+        self.assertIsInstance(test_coin['modified'], datetime.datetime)
         self.assertEqual(len(coins), 3)
 
 # load_coins()
