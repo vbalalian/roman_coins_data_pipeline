@@ -147,7 +147,7 @@ class PaginatedResponse(BaseModel):
 
 def validate_sort_column(sort_by:str):
     '''Validate the sort_by parameter to ensure it's a valid column name'''
-    allowed_sort_columns = ['ruler', 'metal', 'year', 'mass', 'diameter']
+    allowed_sort_columns = ['ruler', 'catalog', 'metal', 'year', 'mass', 'diameter', 'created', 'modified']
     if sort_by not in allowed_sort_columns:
         raise HTTPException(status_code=400, detail='Invalid sort column')
     return sort_by
@@ -166,12 +166,14 @@ async def read_coins(
     year: str = None,
     min_year: str = None,
     max_year: str = None,
-    mass: str = None,
     min_mass: str = None,
     max_mass: str = None,
-    diameter: str = None,
     min_diameter: str = None,
-    max_diameter: str = None
+    max_diameter: str = None,
+    start_created: datetime = None,
+    end_created: datetime = None,
+    start_modified: datetime = None,
+    end_modified: datetime = None
     ):
 
     # Base query
@@ -185,12 +187,14 @@ async def read_coins(
         'year': ('year', '=', year),
         'min_year':('year', '>=', min_year),
         'max_year':('year', '<=', max_year),
-        'mass': ('mass', '=', mass),
         'min_mass':('mass', '>=', min_mass),
         'max_mass':('mass', '<=', max_mass),
-        'diameter': ('diameter', '=', diameter),
         'min_diameter':('diameter', '>=', min_diameter),
-        'max_diameter':('diameter', '<=', max_diameter)
+        'max_diameter':('diameter', '<=', max_diameter),
+        'start_created':('created', '>=', start_created),
+        'end_created':('created', '<=', end_created),
+        'start_modified':('modified', '>=', start_modified),
+        'end_modified':('modified', '<=', end_modified)
     }
 
 
