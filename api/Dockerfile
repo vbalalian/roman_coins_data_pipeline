@@ -35,6 +35,7 @@ RUN adduser \
 RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=bind,source=requirements.txt,target=requirements.txt \
     python3 -m pip install -r requirements.txt
+RUN chown -R appuser:appuser /app
 
 # Switch to the non-privileged user to run the application.
 USER appuser
@@ -43,7 +44,7 @@ USER appuser
 COPY . .
 
 # Expose the port that the application listens on.
-EXPOSE 8000
+EXPOSE 8010
 
 # Run the application.
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80", "--reload"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80"]
