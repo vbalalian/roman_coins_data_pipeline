@@ -31,5 +31,6 @@ jobs:
       run: |
         docker-compose -f compose.test.yaml up --build -d
         docker-compose -f compose.test.yaml run web_scraper pytest
+        docker-compose -f compose.test.yaml run api pytest
     - name: Clean up
       run: docker-compose -f compose.test.yaml down
