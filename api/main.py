@@ -1,27 +1,21 @@
 from fastapi import FastAPI, Query, Path, HTTPException, Depends
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from typing import Annotated
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import os
 from datetime import datetime
 
-# Path to roman_coins database
-db_name = os.getenv('DB_NAME')
-db_user = os.getenv('DB_USER')
-db_password = os.getenv('DB_PASSWORD')
-db_host = 'db'
-
 app = FastAPI()
 
 # Database connection manager
 def get_conn():
     conn = psycopg2.connect(
-        dbname=db_name, 
-        user=db_user, 
-        password=db_password, 
-        host=db_host, 
+        dbname=os.getenv('DB_NAME'), 
+        user=os.getenv('DB_USER'), 
+        password=os.getenv('DB_PASSWORD'), 
+        host='db', 
         cursor_factory=RealDictCursor)
     try:
         yield conn
@@ -70,7 +64,7 @@ class CoinDetails(BaseModel):
     txt: str | None = Field(default=None, title="Filename of alternate coin information .txt")
 
     # Additional metal validation
-    @validator('metal')
+    @field_validator('metal')
     def validate_metal(cls, v):
         valid_metals = ['Gold', 'Silver', 'Copper', 'Bronze', 'Lead', 'Bone', 'Fake']
         if v:
@@ -79,7 +73,7 @@ class CoinDetails(BaseModel):
             return v.title()
     
     # Additional era validation
-    @validator('era')
+    @field_validator('era')
     def validate_era(cls, v):
         valid_eras = ['BC', 'AD']
         if v:
@@ -176,6 +170,12 @@ async def read_coins(
     end_modified: datetime = None
     ):
 
+    if ruler:
+        ruler = ruler.title()
+    if metal:
+        metal = metal.title()
+    if era:
+        era = era.upper()
     # Base query
     query = 'SELECT * FROM roman_coins'
 
@@ -255,7 +255,7 @@ async def read_coins(
 # Coin Search endpoint
 @app.get('/v1/coins/search', response_model=list[Coin], response_model_exclude_none=True)
 async def search_coins(
-    query: Annotated[str, Query(title='Query string', min_length=3, max_length=50, example="crowned by Victory")], 
+    query: Annotated[str, Query(title='Query string', min_length=3, max_length=50, examples=["crowned by Victory"])], 
     db: psycopg2.extensions.connection = Depends(get_conn)
     ) -> list[Coin]:
 
@@ -284,7 +284,7 @@ async def search_coins(
 # Coins by ID endpoint
 @app.get('/v1/coins/id/{coin_id}', response_model=Coin, response_model_exclude_none=True)
 async def coin_by_id(
-    coin_id: Annotated[str, Path(title='The ID of the coin to be retrieved', example="64c3075e-2b01-4b09-a4f0-07be61f7f9b7")], 
+    coin_id: Annotated[str, Path(title='The ID of the coin to be retrieved', examples=["64c3075e-2b01-4b09-a4f0-07be61f7f9b7"])], 
     db: psycopg2.extensions.connection = Depends(get_conn)
     ) -> Coin:
 
