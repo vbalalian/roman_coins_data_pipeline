@@ -259,27 +259,23 @@ async def search_coins(
     db: psycopg2.extensions.connection = Depends(get_conn)
     ) -> list[Coin]:
 
-    if query:
-
-        try:
-            cur = db.cursor()
-            sql = 'SELECT * FROM roman_coins'
-            search_items = [items if len(items) > 1  else query for items in query]
-            params = [f'%{item}%' for item in search_items]
-            filters = ['description LIKE %s' for _ in search_items]
-            sql += ' WHERE ' + ' AND '.join(filters)
-            cur.execute(sql, params)
-            search_result = cur.fetchall()
-        except psycopg2.Error as e:
-            print('Search error:', e)
-        finally:
-            cur.close()
-        try:
-            return [dict(row) for row in search_result]
-        except UnboundLocalError:
-            raise HTTPException(status_code=400, detail='No matching coins found')
-    
-    raise HTTPException(status_code=400, detail='Query string is empty')
+    try:
+        cur = db.cursor()
+        sql = 'SELECT * FROM roman_coins'
+        search_items = [items if len(items) > 1  else query for items in query]
+        params = [f'%{item}%' for item in search_items]
+        filters = ['description LIKE %s' for _ in search_items]
+        sql += ' WHERE ' + ' AND '.join(filters)
+        cur.execute(sql, params)
+        search_result = cur.fetchall()
+    except psycopg2.Error as e:
+        print('Search error:', e)
+    finally:
+        cur.close()
+    if search_result:
+        return [dict(row) for row in search_result]
+    else:
+        raise HTTPException(status_code=400, detail='No matching coins found')
 
 # Coins by ID endpoint
 @app.get('/v1/coins/id/{coin_id}', response_model=Coin, response_model_exclude_none=True)
