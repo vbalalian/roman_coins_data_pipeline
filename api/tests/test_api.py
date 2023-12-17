@@ -168,17 +168,22 @@ def test_search_coins(test_client, test_database):
     assert len(search_response_1.json()) == 8
 
     # Query with one result
-    search_response_1 = test_client.get(r"/v1/coins/search?query=Hadrian")
-    assert search_response_1.status_code ==200
-    assert len(search_response_1.json()) == 1
-    assert search_response_1.json()[0]["ruler"] == "Hadrian"
+    search_response_2 = test_client.get(r"/v1/coins/search?query=Hadrian")
+    assert search_response_2.status_code ==200
+    assert len(search_response_2.json()) == 1
+    assert search_response_2.json()[0]["ruler"] == "Hadrian"
 
     # Query with no results
-    search_response_1 = test_client.get(r"/v1/coins/search?query=Caligula")
-    assert search_response_1.status_code == 400
-    assert search_response_1.json()["detail"]== "No matching coins found"
+    search_response_3 = test_client.get(r"/v1/coins/search?query=Caligula")
+    assert search_response_3.status_code == 400
+    assert search_response_3.json()["detail"]== "No matching coins found"
 
     # Empty query
-    search_response_1 = test_client.get(r"/v1/coins/search?query=")
-    assert search_response_1.status_code == 422
-    assert search_response_1.json()["detail"][0]["type"] == "string_too_short"
+    search_response_4 = test_client.get(r"/v1/coins/search?query=")
+    assert search_response_4.status_code == 422
+    assert search_response_4.json()["detail"][0]["type"] == "string_too_short"
+
+    # Multiple queries
+    search_response_5 = test_client.get(r"/v1/coins/search?query=Victory&query=officina")
+    assert search_response_5.status_code == 200
+    assert len(search_response_5.json()) == 2
