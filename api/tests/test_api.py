@@ -106,7 +106,7 @@ def test_v1_root(test_client):
 
 # Endpoint for all coins, with sorting and filtering
 def test_read_coins(test_client, test_database):
-    
+
     # Default parameters
     default_response = test_client.get("/v1/coins/")
     assert default_response.status_code == 200
@@ -159,4 +159,26 @@ def test_read_coins(test_client, test_database):
     filter_response_6 = test_client.get(r"/v1/coins/?min_diameter=30")
     assert filter_response_6.status_code == 400
 
+# Coin Search endpoint
+def test_search_coins(test_client, test_database):
     
+    # Query with multiple results
+    search_response_1 = test_client.get(r"/v1/coins/search?query=Constantinople")
+    assert search_response_1.status_code ==200
+    assert len(search_response_1.json()) == 8
+
+    # Query with one result
+    search_response_1 = test_client.get(r"/v1/coins/search?query=Hadrian")
+    assert search_response_1.status_code ==200
+    assert len(search_response_1.json()) == 1
+    assert search_response_1.json()[0]["ruler"] == "Hadrian"
+
+    # Query with no results
+    search_response_1 = test_client.get(r"/v1/coins/search?query=Caligula")
+    assert search_response_1.status_code == 400
+    assert search_response_1.json()["detail"]== "No matching coins found"
+
+    # Empty query
+    search_response_1 = test_client.get(r"/v1/coins/search?query=")
+    assert search_response_1.status_code == 422
+    assert search_response_1.json()["detail"][0]["type"] == "string_too_short"
