@@ -187,3 +187,25 @@ def test_search_coins(test_client, test_database):
     search_response_5 = test_client.get(r"/v1/coins/search?query=Victory&query=officina")
     assert search_response_5.status_code == 200
     assert len(search_response_5.json()) == 2
+
+# Coins by ID endpoint
+def test_coin_by_id(test_client, test_database):
+
+    # Valid ID
+    id_response_1 = test_client.get(r"/v1/coins/id/343a3001-ae2e-4745-888e-994374e398a3")
+    assert id_response_1.status_code ==200
+    assert id_response_1.json()["ruler"] == "Aelia Ariadne"
+    
+    # Non-existent ID
+    id_response_2 = test_client.get(r"/v1/coins/id/023-450938fgldf-to0r90ftu-438537")
+    assert id_response_2.status_code == 404
+    assert id_response_2.json()["detail"] == "Coin not found"
+
+    # Invalid ID
+    id_response_3 = test_client.get(r"/v1/coins/id/023450938")
+    assert id_response_3.status_code == 422
+    assert id_response_3.json()["detail"][0]["type"] == "string_too_short"
+
+    # Empty ID
+    id_response_4 = test_client.get(r"/v1/coins/id/")
+    assert id_response_4.status_code == 404
