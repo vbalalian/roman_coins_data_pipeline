@@ -102,7 +102,7 @@ class CoinDetails(BaseModel):
     }
 
 class Coin(CoinDetails):
-    id: str = Field(title="The coin's ID", max_length=50)
+    id: str = Field(title="The coin's ID", min_length=10, max_length=50)
     created: datetime | None = Field(default=None, title="Date and Time the row was created")
     modified: datetime | None = Field(default=None, title="Date and Time the row was modified")
     model_config = {
@@ -280,20 +280,21 @@ async def search_coins(
 # Coins by ID endpoint
 @app.get('/v1/coins/id/{coin_id}', response_model=Coin, response_model_exclude_none=True)
 async def coin_by_id(
-    coin_id: Annotated[str, Path(title='The ID of the coin to be retrieved', examples=["64c3075e-2b01-4b09-a4f0-07be61f7f9b7"])], 
+    coin_id: Annotated[str, Path(title='The ID of the coin to be retrieved', 
+                                 examples=["64c3075e-2b01-4b09-a4f0-07be61f7f9b7"],
+                                 min_length=10, max_length=50)], 
     db: psycopg2.extensions.connection = Depends(get_conn)
     ) -> Coin:
 
     try:
         cur = db.cursor()
-
-        # Execute SQL to fetch matching coin
         cur.execute('SELECT * FROM roman_coins WHERE id = %s', (coin_id,))
         coin = cur.fetchone()
         if coin:
             return dict(coin)
     except psycopg2.Error as e:
         print('ID error:', e)
+        raise HTTPException(status_code=500, detail='Internal Server Error')
     finally:
         cur.close()
     
