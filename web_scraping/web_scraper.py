@@ -184,7 +184,7 @@ def coin_year(coin):
 
         year = start_year
 
-        if year:
+        if year and -50 <= year <= 500:
             valid_years.append(year if era not in ['BC', 'B.C.'] else -year)
 
     return min(valid_years) if valid_years else None
