@@ -9,11 +9,13 @@ from psycopg2.extras import RealDictCursor
 import json
 from datetime import datetime
 
+# Set up test client
 @pytest.fixture(scope='module')
 def test_client():
     with TestClient(app) as client:
         yield client
 
+# Set up test database
 @pytest.fixture(scope='module')
 def test_database():
 
@@ -131,6 +133,10 @@ def test_read_coins(test_client, test_database):
     assert len(response.json()["data"]) == 10
     assert response.json()["data"][0]["year"] == 378
 
+    response = test_client.get("/v1/coins/?sort_by=mass")
+    assert response.status_code == 200
+    assert response.json()["data"][0]["mass"] == 1.46
+
     response = test_client.get("/v1/coins/?sort_by=description")
     assert response.status_code == 400
 
@@ -220,7 +226,7 @@ def test_add_coin(test_client, test_database):
             "description":"This is a test description, minimum 50 characters. ",
             "metal":"Gold", "mass":8.9, "diameter":20.5, "era":"AD", "year":79,
             "inscriptions":"AVG,CAES", "txt":"test_file.txt"}
-    test_id = "3049823-d90njfa09-joand09"
+    test_id = "this-is-a-test-id-0001"
     response = test_client.post(f"/v1/coins/id/{test_id}", json=coin)
     assert response.status_code == 201
     assert response.json()["message"] == "Coin added successfully"
@@ -239,7 +245,7 @@ def test_add_coin(test_client, test_database):
 
     # Normal case, missing fields
     coin = {"ruler":"Test Ruler 2", "catalog":"Test Catalog", "metal":"Gold"}
-    test_id = "34fn59073bn5-dfpanc34bn9"
+    test_id = "this-is-a-test-id-0002"
     response = test_client.post(f"/v1/coins/id/{test_id}", json=coin)
     assert response.status_code == 201
     assert response.json()["message"] == "Coin added successfully"
@@ -259,7 +265,7 @@ def test_add_coin(test_client, test_database):
 
     # Case with invalid data
     coin = {"ruler":"Test Ruler 2", "catalog":5, "metal":"Aluminum", "mass":"heavy"}
-    test_id = "akhvuy409-ln4v98439-5c9"
+    test_id = "test-id-0003"
     response = test_client.post(f"/v1/coins/id/{test_id}", json=coin)
     assert response.status_code == 422
 
@@ -270,6 +276,115 @@ def test_add_coin(test_client, test_database):
 
     # Case with duplicate ID
     coin = {"ruler":"Test Ruler 2", "catalog":"Test Catalog", "metal":"Gold"}
-    test_id = "34fn59073bn5-dfpanc34bn9"
+    test_id = "this-is-a-test-id-0002"
     response = test_client.post(f"/v1/coins/id/{test_id}", json=coin)
     assert response.status_code == 400
+
+# Full coin update endpoint
+def test_update_coin(test_client, test_database):
+
+    # Normal case, full coin update
+    coin = {"ruler":"Test Ruler 3", "ruler_detail":"Test Ruler Detail", 
+            "catalog":"Test Catalog", 
+            "description":"This is a new test description, still 50 characters min.",
+            "metal":"Silver", "mass":4.2, "diameter":15.5, "era":"BC", "year":-40,
+            "inscriptions":"AVG,CAES", "txt":"test_file.txt"}
+    test_id = "this-is-a-test-id-0002"
+    response = test_client.put(f"/v1/coins/id/{test_id}", json=coin)
+    assert response.status_code == 200
+    assert response.json()["message"] == "Coin updated successfully"
+    # Verify coin updated in test database
+    response = test_client.get(f"/v1/coins/id/{test_id}")
+    assert response.status_code == 200
+    assert response.json()["ruler"] == "Test Ruler 3"
+    assert response.json()["mass"] == 4.2
+    assert response.json()["era"] == "BC"
+    modified_at = datetime.strptime(response.json()["modified"], r"%Y-%m-%dT%H:%M:%S.%f")
+    modified_truncated = modified_at.replace(second=0, microsecond=0)
+    current_datetime_truncated = datetime.now().replace(second=0, microsecond=0)
+    assert modified_truncated == current_datetime_truncated
+
+    # Normal case, partial coin update
+    coin = {"ruler":"Test Ruler 4", "metal":"Silver", "year":90}
+    test_id = "this-is-a-test-id-0001"
+    response = test_client.put(f"/v1/coins/id/{test_id}", json=coin)
+    assert response.status_code == 200
+    assert response.json()["message"] == "Coin updated successfully"
+    # Verify coin updated in test database
+    response = test_client.get(f"/v1/coins/id/{test_id}")
+    assert response.status_code == 200
+    assert response.json()["ruler"] == "Test Ruler 4"
+    assert "era" not in response.json().keys()
+    assert "mass" not in response.json().keys()
+    assert "diameter" not in response.json().keys()
+    modified_at = datetime.strptime(response.json()["modified"], r"%Y-%m-%dT%H:%M:%S.%f")
+    modified_truncated = modified_at.replace(second=0, microsecond=0)
+    current_datetime_truncated = datetime.now().replace(second=0, microsecond=0)
+    assert modified_truncated == current_datetime_truncated
+
+    # Case with invalid data
+    coin = {"ruler":"Test Ruler 4", "catalog":5, "metal":"Aluminum", "mass":"heavy"}
+    test_id = "this-is-a-test-id-0002"
+    response = test_client.put(f"/v1/coins/id/{test_id}", json=coin)
+    assert response.status_code == 422
+
+    # Case with missing ID
+    coin = {"ruler":"Test Ruler 2", "catalog":"Test Catalog", "metal":"Gold"}
+    response = test_client.put("/v1/coins/id/", json=coin)
+    assert response.status_code == 404
+
+# Partial coin update endpoint
+def test_patch_coin(test_client, test_database):
+
+    # Normal case, full coin update
+    coin = {"ruler":"Test Ruler 5", "ruler_detail":"Different Ruler Detail", 
+            "catalog":"Catalog 17", 
+            "description":"This is a another new test description, 50 char min.",
+            "metal":"Copper", "mass":1.5, "diameter":10.0, "era":"AD", "year":117,
+            "inscriptions":"PON,COS", "txt":"test_file2.txt"}
+    test_id = "this-is-a-test-id-0001"
+    response = test_client.patch(f"/v1/coins/id/{test_id}", json=coin)
+    assert response.status_code == 200
+    assert response.json()["message"] == "Coin updated successfully"
+    # Verify coin updated in test database
+    response = test_client.get(f"/v1/coins/id/{test_id}")
+    assert response.status_code == 200
+    assert response.json()["ruler"] == "Test Ruler 5"
+    assert response.json()["mass"] == 1.5
+    assert response.json()["era"] == "AD"
+    assert len(response.json()) == 14
+    modified_at = datetime.strptime(response.json()["modified"], r"%Y-%m-%dT%H:%M:%S.%f")
+    modified_truncated = modified_at.replace(second=0, microsecond=0)
+    current_datetime_truncated = datetime.now().replace(second=0, microsecond=0)
+    assert modified_truncated == current_datetime_truncated
+
+    # Normal case, partial coin update
+    coin = {"ruler":"Test Ruler 6", "mass":2.1, "diameter":9.1, "txt":"new_txt.txt"}
+    test_id = "this-is-a-test-id-0002"
+    response = test_client.patch(f"/v1/coins/id/{test_id}", json=coin)
+    assert response.status_code == 200
+    assert response.json()["message"] == "Coin updated successfully"
+    # Verify coin updated in test database
+    response = test_client.get(f"/v1/coins/id/{test_id}")
+    assert response.status_code == 200
+    assert response.json()["ruler"] == "Test Ruler 6"
+    assert response.json()["mass"] == 2.1
+    assert response.json()["era"] == "BC"
+    assert response.json()["year"] == -40
+    assert response.json()["txt"] == "new_txt.txt"
+    assert len(response.json()) == 14
+    modified_at = datetime.strptime(response.json()["modified"], r"%Y-%m-%dT%H:%M:%S.%f")
+    modified_truncated = modified_at.replace(second=0, microsecond=0)
+    current_datetime_truncated = datetime.now().replace(second=0, microsecond=0)
+    assert modified_truncated == current_datetime_truncated
+
+    # Case with invalid data
+    coin = {"ruler":"Test Ruler 7", "catalog":5, "metal":"Aluminum", "mass":"heavy"}
+    test_id = "this-is-a-test-id-0001"
+    response = test_client.patch(f"/v1/coins/id/{test_id}", json=coin)
+    assert response.status_code == 422
+
+    # Case with missing ID
+    coin = {"ruler":"Test Ruler 2", "catalog":"Test Catalog", "metal":"Gold"}
+    response = test_client.patch("/v1/coins/id/", json=coin)
+    assert response.status_code == 404
