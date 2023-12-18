@@ -301,7 +301,7 @@ async def coin_by_id(
     raise HTTPException(status_code=404, detail='Coin not found')
     
 # Add coin endpoint
-@app.post('/v1/coins/id/{coin_id}', status_code=201)
+@app.post('/v1/coins/id/{coin_id}')
 async def add_coin(
     coin_id:Annotated[str, Path(title='The ID of the coin to be added')], 
     coin_details:CoinDetails, 
@@ -313,6 +313,8 @@ async def add_coin(
     INSERT INTO roman_coins (id, ruler, ruler_detail, catalog, description, metal, mass, diameter, era, year, inscriptions, txt, created, modified)
     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     '''
+
+    current_datetime = datetime.now()
 
     # Data to be inserted
     coin_data = (
@@ -328,8 +330,8 @@ async def add_coin(
         coin_details.year,
         coin_details.inscriptions,
         coin_details.txt,
-        datetime.now(),
-        None
+        current_datetime,
+        current_datetime
     )
 
     # Execute the query
@@ -343,7 +345,7 @@ async def add_coin(
     finally:
         cur.close()
 
-    return JSONResponse(content={"message": "Coin added successfully"})
+    return JSONResponse(status_code=201, content={"message": "Coin added successfully"})
 
 # Full coin update endpoint
 @app.put("/v1/coins/id/{coin_id}", status_code=200)
