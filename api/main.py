@@ -56,8 +56,8 @@ class CoinDetails(BaseModel):
     catalog: str | None = Field(default=None, title="The catalog info associated with the coin", max_length=80)
     description: str | None = Field(default=None, title="The description of the coin", max_length=1000)
     metal: str | None = Field(default=None, title="The metal/material composition of the coin", max_length=20)
-    mass: float | None = Field(ge=0.0, lt=50, default=0.0, title="The mass of the coin in grams")
-    diameter: float | None = Field(ge=0.0, le=50, default=0.0, title="The diameter of the coin in millimeters")
+    mass: float | None = Field(gt=0.0, lt=50, default=None, title="The mass of the coin in grams")
+    diameter: float | None = Field(gt=0.0, le=50, default=None, title="The diameter of the coin in millimeters")
     era: str | None = Field(default=None, title="The era of the coin e.g. BC or AD")
     year: int | None = Field(ge=-50, le=500, default=None, title="The year associated with the coin")
     inscriptions: str | None = Field(default=None, title="Recognized inscriptions found on the coin")
@@ -142,7 +142,7 @@ class PaginatedResponse(BaseModel):
 def validate_sort_column(sort_by:str):
     '''Validate the sort_by parameter to ensure it's a valid column name'''
     allowed_sort_columns = ['ruler', 'catalog', 'metal', 'year', 'mass', 'diameter', 'created', 'modified']
-    if sort_by not in allowed_sort_columns:
+    if sort_by.lower() not in allowed_sort_columns:
         raise HTTPException(status_code=400, detail='Invalid sort column')
     return sort_by
 
@@ -379,7 +379,7 @@ async def update_coin(
     return JSONResponse(content={"message": "Coin updated successfully"})
 
 # Partial coin update endpoint
-@app.patch("/v1/coins/id/{coin_id}", status_code=200)
+@app.patch("/v1/coins/id/{coin_id}")
 async def patch_coin(
     coin_id: Annotated[str, Path(title='The ID of the coin to be updated')], 
     coin_update: CoinDetails, 
@@ -408,4 +408,4 @@ async def patch_coin(
     finally:
         cur.close()
 
-    return JSONResponse(content={"message": "Coin updated successfully"})
+    return JSONResponse(status_code=200, content={"message": "Coin updated successfully"})
