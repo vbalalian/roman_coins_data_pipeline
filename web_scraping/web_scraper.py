@@ -208,7 +208,7 @@ def coin_mass(coin):
         description = coin_description(coin)
         match = re.search(r'(\d+((\.|\,|\-)\d+)?)\s?(?:g|gm|gr)\b', description)
         mass = float(match.group(1).replace(',', '.').replace('-', '.'))
-        return mass if mass <= 50 else None
+        return mass if 0 < mass < 50 else None
     except:
         return None
 
@@ -218,7 +218,7 @@ def coin_diameter(coin):
         description = coin_description(coin)
         match = re.search(r'(\d{1,2}(\.\d+)?)\s?(?:mm)', description)
         diameter = float(match.group(1))
-        return diameter if diameter <= 50 else None
+        return diameter if 0 < diameter <= 50 else None
     except:
         return None
 
