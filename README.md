@@ -14,7 +14,7 @@ Scrapes data on coins from the Roman Empire from wildwinds.com, and loads the da
 
 ### [API](api/main.py)
 
-Serves data from the roman coins dataset, and allows data ingestion via POST endpoint. Data is continuously added during web scraping. 
+Serves data from the roman coins dataset, and allows data addition and manipulation via POST, PUT, and PATCH endpoints. Data is continuously added during web scraping. 
 
 ## To Run:
 **(Requires Docker with Docker Compose)**
