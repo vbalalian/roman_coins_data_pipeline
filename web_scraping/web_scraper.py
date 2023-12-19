@@ -62,7 +62,6 @@ def get_pages(directory_url:str):
 def scrape_page(url: str):
     '''Returns BeautifulSoup object of url'''
     with requests.get(url) as html:
-        print("html type:", type(html))
         soup = BeautifulSoup(html.content, 'lxml')
     return soup
 
