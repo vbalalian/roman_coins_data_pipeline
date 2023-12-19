@@ -24,4 +24,4 @@ Terminal Commands:
 2) cd RomanCoins
 3) docker compose up -d
 
-Access version 1 of the API at http://localhost:8000/v1/
+Access version 1 of the API at http://localhost:8010/v1/
