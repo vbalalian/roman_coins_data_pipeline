@@ -24,7 +24,7 @@ def test_database():
     test_password = "postgres"
     test_host = "test_db"
 
-    columns = ['id', 'ruler', 'ruler_detail', 'catalog', 'description', 
+    columns = ['id', 'name', 'name_detail', 'catalog', 'description', 
                     'metal', 'mass', 'diameter', 'era', 'year', 'inscriptions', 
                     'txt', 'created', 'modified']
     dtypes = [
@@ -123,10 +123,10 @@ def test_read_coins(test_client, test_database):
     assert response.json()["pagination"] == {"total_items":20, "total_pages":3, "current_page":2, "items_per_page":8}
     
     # Sorting
-    response = test_client.get("/v1/coins/?sort_by=ruler&desc=True")
+    response = test_client.get("/v1/coins/?sort_by=name&desc=True")
     assert response.status_code == 200
     assert len(response.json()["data"]) == 10
-    assert response.json()["data"][0]["ruler"] == "Hadrian"
+    assert response.json()["data"][0]["name"] == "Hadrian"
 
     response = test_client.get("/v1/coins/?sort_by=year")
     assert response.status_code == 200
@@ -141,7 +141,7 @@ def test_read_coins(test_client, test_database):
     assert response.status_code == 400
 
     # Filtering
-    response = test_client.get(r"/v1/coins/?ruler=aelia%20Flaccilla&min_diameter=21")
+    response = test_client.get(r"/v1/coins/?name=aelia%20Flaccilla&min_diameter=21")
     assert response.status_code == 200
     assert len(response.json()["data"]) == 5
 
@@ -178,7 +178,7 @@ def test_search_coins(test_client, test_database):
     response = test_client.get(r"/v1/coins/search?query=Hadrian")
     assert response.status_code ==200
     assert len(response.json()) == 1
-    assert response.json()[0]["ruler"] == "Hadrian"
+    assert response.json()[0]["name"] == "Hadrian"
 
     # Query with no results
     response = test_client.get(r"/v1/coins/search?query=Caligula")
@@ -201,7 +201,7 @@ def test_coin_by_id(test_client, test_database):
     # Valid ID
     response = test_client.get(r"/v1/coins/id/343a3001-ae2e-4745-888e-994374e398a3")
     assert response.status_code ==200
-    assert response.json()["ruler"] == "Aelia Ariadne"
+    assert response.json()["name"] == "Aelia Ariadne"
     
     # Non-existent ID
     response = test_client.get(r"/v1/coins/id/023-450938fgldf-to0r90ftu-438537")
@@ -221,7 +221,7 @@ def test_coin_by_id(test_client, test_database):
 def test_add_coin(test_client, test_database):
 
     # Normal case, no missing fields
-    coin = {"ruler":"Test Ruler 1", "ruler_detail":"Test Ruler Detail", 
+    coin = {"name":"Test name 1", "name_detail":"Test name Detail", 
             "catalog":"Test Catalog", 
             "description":"This is a test description, minimum 50 characters. ",
             "metal":"Gold", "mass":8.9, "diameter":20.5, "era":"AD", "year":79,
@@ -233,7 +233,7 @@ def test_add_coin(test_client, test_database):
     # Verify coin added to test database
     response = test_client.get(f"/v1/coins/id/{test_id}")
     assert response.status_code == 200
-    assert response.json()["ruler"] == "Test Ruler 1"
+    assert response.json()["name"] == "Test name 1"
     created_at = datetime.strptime(response.json()["created"], r"%Y-%m-%dT%H:%M:%S.%f")
     created_truncated = created_at.replace(second=0, microsecond=0)
     current_datetime_truncated = datetime.now().replace(second=0, microsecond=0)
@@ -244,7 +244,7 @@ def test_add_coin(test_client, test_database):
     assert modified_truncated == current_datetime_truncated
 
     # Normal case, missing fields
-    coin = {"ruler":"Test Ruler 2", "catalog":"Test Catalog", "metal":"Gold"}
+    coin = {"name":"Test name 2", "catalog":"Test Catalog", "metal":"Gold"}
     test_id = "this-is-a-test-id-0002"
     response = test_client.post(f"/v1/coins/id/{test_id}", json=coin)
     assert response.status_code == 201
@@ -253,7 +253,7 @@ def test_add_coin(test_client, test_database):
     # Verify coin added to test database
     response = test_client.get(f"/v1/coins/id/{test_id}")
     assert response.status_code == 200
-    assert response.json()["ruler"] == "Test Ruler 2"
+    assert response.json()["name"] == "Test name 2"
     created_at = datetime.strptime(response.json()["created"], r"%Y-%m-%dT%H:%M:%S.%f")
     created_truncated = created_at.replace(second=0, microsecond=0)
     current_datetime_truncated = datetime.now().replace(second=0, microsecond=0)
@@ -264,18 +264,18 @@ def test_add_coin(test_client, test_database):
     assert modified_truncated == current_datetime_truncated
 
     # Case with invalid data
-    coin = {"ruler":"Test Ruler 2", "catalog":5, "metal":"Aluminum", "mass":"heavy"}
+    coin = {"name":"Test name 2", "catalog":5, "metal":"Aluminum", "mass":"heavy"}
     test_id = "test-id-0003"
     response = test_client.post(f"/v1/coins/id/{test_id}", json=coin)
     assert response.status_code == 422
 
     # Case with missing ID
-    coin = {"ruler":"Test Ruler 2", "catalog":"Test Catalog", "metal":"Gold"}
+    coin = {"name":"Test name 2", "catalog":"Test Catalog", "metal":"Gold"}
     response = test_client.post("/v1/coins/id/", json=coin)
     assert response.status_code == 404
 
     # Case with duplicate ID
-    coin = {"ruler":"Test Ruler 2", "catalog":"Test Catalog", "metal":"Gold"}
+    coin = {"name":"Test name 2", "catalog":"Test Catalog", "metal":"Gold"}
     test_id = "this-is-a-test-id-0002"
     response = test_client.post(f"/v1/coins/id/{test_id}", json=coin)
     assert response.status_code == 400
@@ -284,7 +284,7 @@ def test_add_coin(test_client, test_database):
 def test_update_coin(test_client, test_database):
 
     # Normal case, full coin update
-    coin = {"ruler":"Test Ruler 3", "ruler_detail":"Test Ruler Detail", 
+    coin = {"name":"Test name 3", "name_detail":"Test name Detail", 
             "catalog":"Test Catalog", 
             "description":"This is a new test description, still 50 characters min.",
             "metal":"Silver", "mass":4.2, "diameter":15.5, "era":"BC", "year":-40,
@@ -296,7 +296,7 @@ def test_update_coin(test_client, test_database):
     # Verify coin updated in test database
     response = test_client.get(f"/v1/coins/id/{test_id}")
     assert response.status_code == 200
-    assert response.json()["ruler"] == "Test Ruler 3"
+    assert response.json()["name"] == "Test name 3"
     assert response.json()["mass"] == 4.2
     assert response.json()["era"] == "BC"
     modified_at = datetime.strptime(response.json()["modified"], r"%Y-%m-%dT%H:%M:%S.%f")
@@ -305,7 +305,7 @@ def test_update_coin(test_client, test_database):
     assert modified_truncated == current_datetime_truncated
 
     # Normal case, partial coin update
-    coin = {"ruler":"Test Ruler 4", "metal":"Silver", "year":90}
+    coin = {"name":"Test name 4", "metal":"Silver", "year":90}
     test_id = "this-is-a-test-id-0001"
     response = test_client.put(f"/v1/coins/id/{test_id}", json=coin)
     assert response.status_code == 200
@@ -313,7 +313,7 @@ def test_update_coin(test_client, test_database):
     # Verify coin updated in test database
     response = test_client.get(f"/v1/coins/id/{test_id}")
     assert response.status_code == 200
-    assert response.json()["ruler"] == "Test Ruler 4"
+    assert response.json()["name"] == "Test name 4"
     assert "era" not in response.json().keys()
     assert "mass" not in response.json().keys()
     assert "diameter" not in response.json().keys()
@@ -323,13 +323,13 @@ def test_update_coin(test_client, test_database):
     assert modified_truncated == current_datetime_truncated
 
     # Case with invalid data
-    coin = {"ruler":"Test Ruler 4", "catalog":5, "metal":"Aluminum", "mass":"heavy"}
+    coin = {"name":"Test name 4", "catalog":5, "metal":"Aluminum", "mass":"heavy"}
     test_id = "this-is-a-test-id-0002"
     response = test_client.put(f"/v1/coins/id/{test_id}", json=coin)
     assert response.status_code == 422
 
     # Case with missing ID
-    coin = {"ruler":"Test Ruler 2", "catalog":"Test Catalog", "metal":"Gold"}
+    coin = {"name":"Test name 2", "catalog":"Test Catalog", "metal":"Gold"}
     response = test_client.put("/v1/coins/id/", json=coin)
     assert response.status_code == 404
 
@@ -337,7 +337,7 @@ def test_update_coin(test_client, test_database):
 def test_patch_coin(test_client, test_database):
 
     # Normal case, full coin update
-    coin = {"ruler":"Test Ruler 5", "ruler_detail":"Different Ruler Detail", 
+    coin = {"name":"Test name 5", "name_detail":"Different name Detail", 
             "catalog":"Catalog 17", 
             "description":"This is a another new test description, 50 char min.",
             "metal":"Copper", "mass":1.5, "diameter":10.0, "era":"AD", "year":117,
@@ -349,7 +349,7 @@ def test_patch_coin(test_client, test_database):
     # Verify coin updated in test database
     response = test_client.get(f"/v1/coins/id/{test_id}")
     assert response.status_code == 200
-    assert response.json()["ruler"] == "Test Ruler 5"
+    assert response.json()["name"] == "Test name 5"
     assert response.json()["mass"] == 1.5
     assert response.json()["era"] == "AD"
     assert len(response.json()) == 14
@@ -359,7 +359,7 @@ def test_patch_coin(test_client, test_database):
     assert modified_truncated == current_datetime_truncated
 
     # Normal case, partial coin update
-    coin = {"ruler":"Test Ruler 6", "mass":2.1, "diameter":9.1, "txt":"new_txt.txt"}
+    coin = {"name":"Test name 6", "mass":2.1, "diameter":9.1, "txt":"new_txt.txt"}
     test_id = "this-is-a-test-id-0002"
     response = test_client.patch(f"/v1/coins/id/{test_id}", json=coin)
     assert response.status_code == 200
@@ -367,7 +367,7 @@ def test_patch_coin(test_client, test_database):
     # Verify coin updated in test database
     response = test_client.get(f"/v1/coins/id/{test_id}")
     assert response.status_code == 200
-    assert response.json()["ruler"] == "Test Ruler 6"
+    assert response.json()["name"] == "Test name 6"
     assert response.json()["mass"] == 2.1
     assert response.json()["era"] == "BC"
     assert response.json()["year"] == -40
@@ -379,12 +379,12 @@ def test_patch_coin(test_client, test_database):
     assert modified_truncated == current_datetime_truncated
 
     # Case with invalid data
-    coin = {"ruler":"Test Ruler 7", "catalog":5, "metal":"Aluminum", "mass":"heavy"}
+    coin = {"name":"Test name 7", "catalog":5, "metal":"Aluminum", "mass":"heavy"}
     test_id = "this-is-a-test-id-0001"
     response = test_client.patch(f"/v1/coins/id/{test_id}", json=coin)
     assert response.status_code == 422
 
     # Case with missing ID
-    coin = {"ruler":"Test Ruler 2", "catalog":"Test Catalog", "metal":"Gold"}
+    coin = {"name":"Test name 2", "catalog":"Test Catalog", "metal":"Gold"}
     response = test_client.patch("/v1/coins/id/", json=coin)
     assert response.status_code == 404

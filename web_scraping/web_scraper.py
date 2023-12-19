@@ -18,7 +18,7 @@ db_info = {'db_name':os.getenv('DB_NAME', 'roman_coins'),
            'db_host':'db'}
 
 table_name = 'roman_coins'
-table_columns = ['id', 'ruler', 'ruler_detail', 'catalog', 'description', 
+table_columns = ['id', 'name', 'name_detail', 'catalog', 'description', 
                  'metal', 'mass', 'diameter', 'era', 'year', 'inscriptions', 
                  'txt', 'created', 'modified']
 column_dtypes = [
@@ -47,23 +47,27 @@ def create_table(conn:psycopg2.extensions.connection, table:str, cols:list, dtyp
                     ', '.join(f'{col} {dtype}' for col, dtype 
                                 in zip(cols, dtypes)) + ');')
 
-def get_pages(page:str):
-    '''Scrapes directory for a list of (ruler) pages'''
-    url_root = page[:-6]
-    with requests.get(page) as raw:
-        soup = BeautifulSoup(raw.content, 'lxml')
-    options = soup.find_all('option')
-    pages = [url_root + i.attrs['value'] for i in options if i.attrs['value'] != ''][:-6]
+def get_pages(directory_url:str):
+    '''Scrapes directory for a list of coin figurehead pages'''
+    with requests.get(directory_url) as html:
+        soup = BeautifulSoup(html.content, 'lxml')
+    pages = []
+    root = directory_url[:-6]
+    for element in soup.find_all("tr"):
+        branch = element.find("a", href=True)
+        if branch and "/i.html" in branch["href"]:
+            pages.append(root + branch["href"])
     return pages
 
 def scrape_page(url: str):
     '''Returns BeautifulSoup object of url'''
-    html = requests.get(url)
-    soup = BeautifulSoup(html.content, 'lxml')
+    with requests.get(url) as html:
+        print("html type:", type(html))
+        soup = BeautifulSoup(html.content, 'lxml')
     return soup
 
 def pull_title(soup):
-    '''Returns title element (corresponding to ruler) from BeautifulSoup object'''
+    '''Returns title element (corresponding to name) from BeautifulSoup object'''
     raw_title = soup.find('title')
     if raw_title:
         title_text = raw_title.text
@@ -258,8 +262,8 @@ def coins_from_soup(soup:BeautifulSoup):
             current_datetime = datetime.datetime.now()
             coins.append({
                 'id':coin_id(),
-                'ruler':title,
-                'ruler_detail':subtitle,
+                'name':title,
+                'name_detail':subtitle,
                 'catalog':coin_catalog(coin),
                 'description':coin_description(coin),
                 'metal':coin_metal(coin),
@@ -334,10 +338,15 @@ def scrape_and_load(conn:psycopg2.extensions.connection, state_path:str | None, 
 def main():
     '''Scrapes, processes, and loads data from over 200 page requests, which 
     takes a couple hours due to required 30-second delay between requests)'''
-    pages = get_pages('https://www.wildwinds.com/coins/ric/i.html')
+    print("Sourcing Roman Empire coin pages...")
+    empire_pages = list(set(get_pages('https://www.wildwinds.com/coins/ric/i.html')))
+    sleep(30)
+    print("Sourcing Roman Republic coin pages...")
+    republic_pages = list(set(get_pages('https://www.wildwinds.com/coins/rsc/i.html')))
+    combined_pages = sorted(empire_pages + republic_pages)
     with connect_db(**db_info) as conn:
         create_table(conn, table_name, table_columns, column_dtypes)
-        scrape_and_load(conn, state_path, pages, table_name)
+        scrape_and_load(conn, state_path, combined_pages, table_name)
     conn.close()
 
 if __name__ == '__main__':

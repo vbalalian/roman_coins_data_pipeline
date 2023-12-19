@@ -40,7 +40,7 @@ async def v1_root() -> JSONResponse:
         'status': 'OK',
         'documentation': '/docs/',
         'endpoints': {
-            '/v1/coins': 'Retrieve a paginated list of coins with optional sorting and filtering. You can filter by properties like ruler, metal, era, and more, as well as sort the results.',
+            '/v1/coins': 'Retrieve a paginated list of coins with optional sorting and filtering. You can filter by properties like name, metal, era, and more, as well as sort the results.',
             '/v1/coins/id/{coin_id}': 'Retrieve detailed information about a single coin by its ID. This endpoint provides complete data about a specific coin.',
             '/v1/coins/search': 'Search for coins based on a query. This allows you to find coins by matching against their descriptions or other text attributes.',
             '/v1/coins/id/{coin_id} [POST]': 'Add a new coin to the database. This endpoint is for inserting new coin data into the collection.',
@@ -51,15 +51,15 @@ async def v1_root() -> JSONResponse:
 
 # Coin validation models
 class CoinDetails(BaseModel):
-    ruler: str | None = Field(default=None, title="The name of the coin's figurehead", max_length=30)
-    ruler_detail: str | None = Field(default=None, title="The subtitle/detail of the coin's figurehead", max_length=1000)
+    name: str | None = Field(default=None, title="The name of the coin's figurehead", max_length=30)
+    name_detail: str | None = Field(default=None, title="The subtitle/detail of the coin's figurehead", max_length=1000)
     catalog: str | None = Field(default=None, title="The catalog info associated with the coin", max_length=80)
     description: str | None = Field(default=None, title="The description of the coin", max_length=1000)
     metal: str | None = Field(default=None, title="The metal/material composition of the coin", max_length=20)
     mass: float | None = Field(gt=0.0, lt=50, default=None, title="The mass of the coin in grams")
     diameter: float | None = Field(gt=0.0, le=50, default=None, title="The diameter of the coin in millimeters")
     era: str | None = Field(default=None, title="The era of the coin e.g. BC or AD")
-    year: int | None = Field(ge=-50, le=500, default=None, title="The year associated with the coin")
+    year: int | None = Field(ge=-750, le=500, default=None, title="The year associated with the coin")
     inscriptions: str | None = Field(default=None, title="Recognized inscriptions found on the coin")
     txt: str | None = Field(default=None, title="Filename of alternate coin information .txt")
 
@@ -85,8 +85,8 @@ class CoinDetails(BaseModel):
         "json_schema_extra": {
             "examples": [
                 {
-                    "ruler": "Augustus",
-                    "ruler_detail": "The first Roman Emperor, aka Octavian, adopted son of Julius Caesar",
+                    "name": "Augustus",
+                    "name_detail": "The first Roman Emperor, aka Octavian, adopted son of Julius Caesar",
                     "description": "Denarius, Victory crowning an eagle / Laureate head right",
                     "catalog": "RIC 248",
                     "metal": "Silver",
@@ -110,8 +110,8 @@ class Coin(CoinDetails):
             "examples": [
                 {
                     "id": "f351566b-7f7b-4ff6-9d90-aac9a09045db",
-                    "ruler": "Augustus",
-                    "ruler_detail": "The first Roman Emperor, aka Octavian, adopted son of Julius Caesar",
+                    "name": "Augustus",
+                    "name_detail": "The first Roman Emperor, aka Octavian, adopted son of Julius Caesar",
                     "catalog": "RIC 248",
                     "description": "Denarius, Victory crowning an eagle / Laureate head right",
                     "metal": "Silver",
@@ -141,7 +141,7 @@ class PaginatedResponse(BaseModel):
 
 def validate_sort_column(sort_by:str):
     '''Validate the sort_by parameter to ensure it's a valid column name'''
-    allowed_sort_columns = ['ruler', 'catalog', 'metal', 'year', 'mass', 'diameter', 'created', 'modified']
+    allowed_sort_columns = ['name', 'catalog', 'metal', 'year', 'mass', 'diameter', 'created', 'modified']
     if sort_by.lower() not in allowed_sort_columns:
         raise HTTPException(status_code=400, detail='Invalid sort column')
     return sort_by
@@ -154,7 +154,7 @@ async def read_coins(
     page_size: int = 10, 
     sort_by: str = None,
     desc: bool = False,
-    ruler: str = None,
+    name: str = None,
     metal: str = None,
     era: str = None,
     year: str = None,
@@ -170,8 +170,8 @@ async def read_coins(
     end_modified: datetime = None
     ):
 
-    if ruler:
-        ruler = ruler.title()
+    if name:
+        name = name.title()
     if metal:
         metal = metal.title()
     if era:
@@ -181,7 +181,7 @@ async def read_coins(
 
     # Mapping filters to their SQL query equivalents
     filter_mappings = {
-        'ruler': ('ruler', '=', ruler),
+        'name': ('name', '=', name),
         'metal': ('metal', '=', metal),
         'era': ('era', '=', era),
         'year': ('year', '=', year),
@@ -310,7 +310,7 @@ async def add_coin(
 
     # SQL for adding a Coin to the database
     insert_query = '''
-    INSERT INTO roman_coins (id, ruler, ruler_detail, catalog, description, metal, mass, diameter, era, year, inscriptions, txt, created, modified)
+    INSERT INTO roman_coins (id, name, name_detail, catalog, description, metal, mass, diameter, era, year, inscriptions, txt, created, modified)
     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     '''
 
@@ -319,8 +319,8 @@ async def add_coin(
     # Data to be inserted
     coin_data = (
         coin_id,
-        coin_details.ruler,
-        coin_details.ruler_detail,
+        coin_details.name,
+        coin_details.name_detail,
         coin_details.catalog,
         coin_details.description,
         coin_details.metal,

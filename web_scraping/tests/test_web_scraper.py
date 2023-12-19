@@ -21,7 +21,7 @@ db_info = {'db_name':'test_database',
            'db_password':'postgres',
            'db_host':'test_db'}
 table_info = {'name':'test_table',
-              'columns':['ruler', 'mass'],
+              'columns':['name', 'mass'],
               'dtypes':['VARCHAR(30)', 'REAL']}
 
 # connect_db()
@@ -63,7 +63,7 @@ class TestTableCreation(unittest.TestCase):
 
         create_table(mock_conn, self.table_name, self.table_columns, self.dtypes)
         
-        expected_command = 'CREATE TABLE IF NOT EXISTS test_table (ruler VARCHAR(30), mass REAL);'
+        expected_command = 'CREATE TABLE IF NOT EXISTS test_table (name VARCHAR(30), mass REAL);'
         mock_cursor.execute.assert_called_with(expected_command)
         mock_cursor.__exit__.assert_called()
 
@@ -134,10 +134,11 @@ class TestScrapePage(unittest.TestCase):
 
     @patch('web_scraper.requests.get')
     def test_scrape_page_success(self, mock_get):
-        test_html_content = '<html><body><h1>TEST HTML CONTENT</h1></body></html>'
+        test_html_content = '<html><body><h1>TEST HTML CONTENT</h1></body></html>'.encode()
         mock_response = MagicMock()
-        mock_response.content = test_html_content.encode()
-        mock_get.return_value = mock_response
+        mock_response.content = test_html_content
+        mock_get.return_value.__enter__.return_value = mock_response
+        mock_get.__exit__.return_value = None
 
         test_url = 'http://testsite.com/coins/ric/augustus/i.html'
 
@@ -185,12 +186,12 @@ class TestPullTitle(unittest.TestCase):
 class TestPullSubtitle(unittest.TestCase):
 
     def setUp(self):
-        self.direct_subtitle_html = "<html><body><title>Test Ruler</title><h2>Browsing Coins of Test Ruler</h2>Subtitle</body></html>"
-        self.p_subtitle_html = "<html><body><title>Test Ruler</title><h2></h2><p>Subtitle</p></body></html>"
-        self.font_subtitle_html = "<html><body><h2>Test Ruler</h2><p><font>Subtitle</font></p></body></html>"
-        self.complex_subtitle_html = '<html><body><h2>Test Ruler</h2><p><img src="test.jpg"/><br/>Subtitle</p></body></html>'
-        self.no_subtitle_html = '<html><body><h2>Test Ruler</h2><p></p></body></html>'
-        self.navigation_subtitle_html = '<html><body><h2>Test Ruler</h2><p>Browse the Test Page</p></body></html>'
+        self.direct_subtitle_html = "<html><body><title>Test name</title><h2>Browsing Coins of Test name</h2>Subtitle</body></html>"
+        self.p_subtitle_html = "<html><body><title>Test name</title><h2></h2><p>Subtitle</p></body></html>"
+        self.font_subtitle_html = "<html><body><h2>Test name</h2><p><font>Subtitle</font></p></body></html>"
+        self.complex_subtitle_html = '<html><body><h2>Test name</h2><p><img src="test.jpg"/><br/>Subtitle</p></body></html>'
+        self.no_subtitle_html = '<html><body><h2>Test name</h2><p></p></body></html>'
+        self.navigation_subtitle_html = '<html><body><h2>Test name</h2><p>Browse the Test Page</p></body></html>'
         self.expected_subtitle = 'Subtitle'
 
     def test_direct_subtitle(self):
@@ -334,42 +335,42 @@ class TestCoinYear(unittest.TestCase):
 class TestCoinTxt(unittest.TestCase):
 
     def setUp(self):
-        self.test_ruler = 'Test Ruler'
-        self.test_url = 'https://www.wildwinds.com/coins/ric/test_ruler/TEST_123.txt'
+        self.test_name = 'Test name'
+        self.test_url = 'https://www.wildwinds.com/coins/ric/test_name/TEST_123.txt'
     
     def test_normal_txt(self): # 4 elements
         normal_coins = coins_from_html(path='tests/test_data/test_html/normal.html')
-        self.assertEqual(coin_txt(normal_coins[0], title=self.test_ruler), self.test_url)
+        self.assertEqual(coin_txt(normal_coins[0], title=self.test_name), self.test_url)
 
     def test_txt_five_elements(self):
         # Case with 5 elements
         five_element_html = '<tr><td>Extra</td><td bgcolor="#FF0000">TEST 123</td><td>Test Description</td><td><a href="TEST_123.txt">txt file</a></td><td><a href="TEST_123.jpg">jpg file</a></td></tr>'
         five_element_coin = coins_from_html(html=five_element_html)
-        self.assertEqual(coin_txt(five_element_coin, title=self.test_ruler), self.test_url)
+        self.assertEqual(coin_txt(five_element_coin, title=self.test_name), self.test_url)
 
     def test_txt_six_elements(self):
         # Case with 6 elements
         six_element_html = '<tr><td>Extra</td><td bgcolor="#FF0000">TEST 123</td><td>Test Description</td><td>Extra</td><td><a href="TEST_123.txt">txt file</a></td><td><a href="TEST_123.jpg">jpg file</a></td></tr>'
         six_element_coin = coins_from_html(html=six_element_html)
-        self.assertEqual(coin_txt(six_element_coin, title=self.test_ruler), self.test_url)
+        self.assertEqual(coin_txt(six_element_coin, title=self.test_name), self.test_url)
 
     def test_txt_seven_elements(self):
         # Case with 7 elements
         seven_element_html = '<tr><td>Extra</td><td bgcolor="#FF0000">TEST 123</td><td>Extra</td><td>Test Description</td><td>Extra</td><td><a href="TEST_123.txt">txt file</a></td><td><a href="TEST_123.jpg">jpg file</a></td></tr>'
         seven_element_coin = coins_from_html(html=seven_element_html)
-        self.assertEqual(coin_txt(seven_element_coin, title=self.test_ruler), self.test_url)
+        self.assertEqual(coin_txt(seven_element_coin, title=self.test_name), self.test_url)
 
     def test_txt_eight_elements(self):
         # Case with 8 elements
         eight_element_html = '<tr><td>Extra</td><td bgcolor="#FF0000">TEST 123</td><td>Extra</td><td>Test Description</td><td>Extra</td><td><a href="TEST_123.txt">txt file</a></td><td>Extra</td><td><a href="123.jpg">jpg</a></td></tr>'
         eight_element_coin = coins_from_html(html=eight_element_html)
-        self.assertEqual(coin_txt(eight_element_coin, title=self.test_ruler), self.test_url)
+        self.assertEqual(coin_txt(eight_element_coin, title=self.test_name), self.test_url)
 
     def test_missing_txt(self):
         # Case with no txt
         no_txt_html = '<tr><td bgcolor="#FF0000">TEST 123</td><td>Test Desc</td><td>filler</td><td><a href="TEST_123.jpg">jpg file</a></td></tr>'
         no_txt_coin = coins_from_html(html=no_txt_html)
-        self.assertIsNone(coin_txt(no_txt_coin, title=self.test_ruler))
+        self.assertIsNone(coin_txt(no_txt_coin, title=self.test_name))
 
 # coin_mass()
 class TestCoinMass(unittest.TestCase):
@@ -435,8 +436,8 @@ class TestCoinsFromSoup(unittest.TestCase):
         soup = BeautifulSoup(html.replace('\n', '').encode(), 'lxml')
         coins = coins_from_soup(soup)
         test_coin = coins[0]
-        self.assertEqual(test_coin['ruler'], 'Test Ruler')
-        self.assertEqual(test_coin['ruler_detail'], 'Test Subtitle')
+        self.assertEqual(test_coin['name'], 'Test name')
+        self.assertEqual(test_coin['name_detail'], 'Test Subtitle')
         self.assertEqual(test_coin['catalog'], 'TEST 123')
         self.assertEqual(test_coin['description'], 'Test Description AD 350 28mm, 8.24g. AVG CAES filler')
         self.assertEqual(test_coin['metal'], 'Copper')
@@ -445,7 +446,7 @@ class TestCoinsFromSoup(unittest.TestCase):
         self.assertEqual(test_coin['era'], 'AD')
         self.assertEqual(test_coin['year'], 350)
         self.assertEqual(test_coin['inscriptions'], 'AVG,CAES')
-        self.assertEqual(test_coin['txt'], 'https://www.wildwinds.com/coins/ric/test_ruler/TEST_123.txt')
+        self.assertEqual(test_coin['txt'], 'https://www.wildwinds.com/coins/ric/test_name/TEST_123.txt')
         self.assertIsInstance(test_coin['created'], datetime.datetime)
         self.assertIsInstance(test_coin['modified'], datetime.datetime)
         self.assertEqual(len(coins), 3)
@@ -454,8 +455,8 @@ class TestCoinsFromSoup(unittest.TestCase):
 class TestLoadCoins(unittest.TestCase):
 
     def setUp(self):
-        self.coins = [{'ruler': 'Test Ruler 1', 'mass': 0.0}, 
-                      {'ruler': 'Test Ruler 2', 'mass': 2.4}]
+        self.coins = [{'name': 'Test name 1', 'mass': 0.0}, 
+                      {'name': 'Test name 2', 'mass': 2.4}]
         self.table_name = table_info['name']
         self.table_columns = table_info['columns']
         self.dtypes = table_info['dtypes']
@@ -470,7 +471,7 @@ class TestLoadCoins(unittest.TestCase):
         load_coins(self.coins, mock_conn, self.table_name)
 
         expected_calls = [
-            call(f"INSERT INTO {self.table_name} (ruler, mass) VALUES (%(ruler)s, %(mass)s);", coin)
+            call(f"INSERT INTO {self.table_name} (name, mass) VALUES (%(name)s, %(mass)s);", coin)
             for coin in self.coins
         ]
         mock_cursor.execute.assert_has_calls(expected_calls, any_order=True)
@@ -499,8 +500,8 @@ class TestLoadCoins(unittest.TestCase):
             result = cursor.fetchall()
         conn.close()
 
-        expected_row_1 = {'ruler': 'Test Ruler 1', 'mass': 0.0}
-        expected_row_2 = {'ruler': 'Test Ruler 2', 'mass': 2.4}
+        expected_row_1 = {'name': 'Test name 1', 'mass': 0.0}
+        expected_row_2 = {'name': 'Test name 2', 'mass': 2.4}
         self.assertEqual(len(result), 2)
         self.assertEqual(result[0], expected_row_1)
         self.assertEqual(result[1], expected_row_2)
@@ -595,10 +596,10 @@ class TestMain(unittest.TestCase):
              patch('web_scraper.state_path', test_state_path):
             main()
 
-        mock_get_pages.assert_called_with('https://www.wildwinds.com/coins/ric/i.html')
+        mock_get_pages.assert_has_calls([call('https://www.wildwinds.com/coins/ric/i.html'), call('https://www.wildwinds.com/coins/rsc/i.html')])
         mock_connect_db.assert_called_with(**test_db_info)
         mock_create_table.assert_called_with(mock_conn, test_table_name, test_table_columns, test_column_dtypes)
-        mock_scrape_and_load.assert_called_with(mock_conn, test_state_path, ['page1', 'page2', 'page3'], test_table_name)
+        mock_scrape_and_load.assert_called_with(mock_conn, test_state_path, ['page1', 'page1', 'page2', 'page2', 'page3', 'page3'], test_table_name)
 
 if __name__ == '__main__':
     unittest.main()
