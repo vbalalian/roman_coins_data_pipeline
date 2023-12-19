@@ -1,4 +1,4 @@
-![image](https://github.com/vbalalian/RomanCoins/assets/120220346/d7858509-8d06-4b15-9c0d-583214388469)
+![roman_counting_coins](https://github.com/vbalalian/RomanCoins/assets/120220346/d52d3ba8-1f29-488a-82ec-9de71460daaa)
 
 # Roman Coins
 ## A (work in progress) end-to-end data pipeline project
