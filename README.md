@@ -10,7 +10,7 @@ Extracting, Loading, and Transforming data on Roman Coins gathered from wildwind
 
 ### [Web Scraper](web_scraping/web_scraper.py)
 
-Scrapes data on coins from the Roman Empire from wildwinds.com, and loads the data into a postgres server. Due to the required 30-second delay between page requests, scraping takes several hours to complete; the data is loaded into the server as it arrives. Stateful scraping allows data ingestion to continue where it left off in the case of a shutdown. 
+Scrapes data on coins from the Roman Empire from wildwinds.com, and loads the data into a postgres server. Due to the required 30-second delay between page requests, scraping takes several hours to complete; the data is loaded into the server as it arrives.
 
 ### [API](api/main.py)
 
