@@ -20,8 +20,9 @@ Serves data from the roman coins dataset, and allows data addition and manipulat
 **(Requires Docker with Docker Compose)**
 
 Terminal Commands:
-1) git clone https://github.com/vbalalian/roman_coins_data_pipeline.git
-2) cd roman_coins_data_pipeline
-3) docker compose up -d
-
+```
+git clone https://github.com/vbalalian/roman_coins_data_pipeline.git
+cd roman_coins_data_pipeline
+docker compose up -d
+```
 Access version 1 of the API at http://localhost:8010/v1/
