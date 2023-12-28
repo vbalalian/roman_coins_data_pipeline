@@ -24,7 +24,12 @@ jobs:
         
     - name: Clean up
       run: docker-compose -f compose.test.yaml down
-
+  
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    
+    steps:
     - name: Build Docker images
       run: docker-compose build
 
