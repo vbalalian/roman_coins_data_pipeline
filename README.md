@@ -2,7 +2,7 @@
 
 # Roman Coins
 ## A (work in progress) end-to-end data pipeline project
-[![Continuous Integration](https://github.com/vbalalian/RomanCoins/actions/workflows/ci.yml/badge.svg)](https://github.com/vbalalian/RomanCoins/actions/workflows/ci.yml)
+[![CI/CD](https://github.com/vbalalian/RomanCoins/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/vbalalian/RomanCoins/actions/workflows/ci-cd.yml)
 
 Extracting, Loading, and Transforming data on Roman Coins gathered from wildwinds.com
 
