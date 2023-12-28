@@ -1,4 +1,4 @@
-name: Continuous Integration
+name: Continuous Integration and Deployment
 
 on: 
   push:
@@ -12,7 +12,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    
+  
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v1
 
@@ -30,18 +30,23 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Build Docker images
-      run: docker-compose build
+      - uses: actions/checkout@v2
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
 
-    - name: Login to Docker Hub
-      uses: docker/login-action@v1
-      with:
-        username: ${{ secrets.DOCKER_HUB_USERNAME }}
-        password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+      - name: Build Docker images
+        run: docker-compose build
 
-    - name: Tag and Push Images
-      run: |
-        docker tag roman_coins_data_pipeline_web_scraper ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:web_scraper-${{ github.sha }}
-        docker push ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:web_scraper-${{ github.sha }}
-        docker tag roman_coins_data_pipeline_api ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:api-${{ github.sha }}
-        docker push ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:api-${{ github.sha }}
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      - name: Tag and Push Images
+        run: |
+          docker tag roman_coins_data_pipeline_web_scraper ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:web_scraper-${{ github.sha }}
+          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:web_scraper-${{ github.sha }}
+          docker tag roman_coins_data_pipeline_api ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:api-${{ github.sha }}
+          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:api-${{ github.sha }}
