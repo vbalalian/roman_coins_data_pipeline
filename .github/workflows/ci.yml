@@ -36,7 +36,7 @@ jobs:
 
     - name: Tag and Push Images
       run: |
-        docker tag roman_coins_data_pipeline-web_scraper ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:web_scraper-${{ github.sha }}
+        docker tag roman_coins_data_pipeline_web_scraper ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:web_scraper-${{ github.sha }}
         docker push ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:web_scraper-${{ github.sha }}
-        docker tag roman_coins_data_pipeline-api ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:api-${{ github.sha }}
+        docker tag roman_coins_data_pipeline_api ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:api-${{ github.sha }}
         docker push ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:api-${{ github.sha }}
