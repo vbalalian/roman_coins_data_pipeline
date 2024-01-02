@@ -3,8 +3,16 @@ name: Continuous Integration and Deployment
 on: 
   push:
     branches: [master]
+    paths:
+      - "web_scraping/**"
+      - "api/**"
+      - "airbyte/**"
   pull_request:
     branches: [master]
+    paths:
+      - "web_scraping/**"
+      - "api/**"
+      - "airbyte/**"
 
 jobs:
   build-and-test:
@@ -45,9 +53,18 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
-      - name: Tag and Push Images
+      - name: Build and Push Web Scraper Image
+        if: contains(github.event.head_commit.modified, "web_scraping/")
         run: |
-          docker tag roman_coins_data_pipeline_web_scraper ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:web_scraper-${{ github.sha }}
+          docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:web_scraper-${{ github.sha }} ./web_scraping
+          docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:web_scraper-latest ./web_scraping
           docker push ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:web_scraper-${{ github.sha }}
-          docker tag roman_coins_data_pipeline_api ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:api-${{ github.sha }}
+          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:web_scraper-latest
+
+      - name: Build and Push API Image
+        if: contains(github.event.head_commit.modified, "api/")
+        run: |
+          docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:api-${{ github.sha }} ./api
+          docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:api-latest ./api
           docker push ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:api-${{ github.sha }}
+          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:api-latest
