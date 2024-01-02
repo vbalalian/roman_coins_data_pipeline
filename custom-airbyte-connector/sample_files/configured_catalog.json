@@ -1,0 +1,62 @@
+{
+    "streams": [
+      {
+        "stream": {
+          "name": "roman_coin_api_stream",
+          "json_schema": {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": ["string"]
+              },
+              "name": {
+                "type": ["null", "string"]
+              },
+              "name_detail": {
+                "type": ["null", "string"]
+              },
+              "catalog": {
+                "type": ["null", "string"]
+              },
+              "description": {
+                "type": ["null", "string"]
+              },
+              "metal": {
+                "type": ["null", "string"]
+              },
+              "mass": {
+                "type": ["null", "number"]
+              },
+              "diameter": {
+                "type": ["null", "number"]
+              },
+              "era": {
+                "type": ["null", "string"]
+              },
+              "year": {
+                "type": ["null", "integer"]
+              },
+              "inscriptions": {
+                "type": ["null", "string"]
+              },
+              "txt": {
+                "type": ["null", "string"]
+              },
+              "created": {
+                "type": ["null", "string"],
+                "format": "date-time"
+              },
+              "modified": {
+                "type": ["null", "string"],
+                "format": "date-time"
+              }
+            }
+          },
+          "supported_sync_modes": ["full_refresh", "incremental"]
+        },
+        "sync_mode": "incremental",
+        "destination_sync_mode": "overwrite"
+      }
+    ]
+  }
