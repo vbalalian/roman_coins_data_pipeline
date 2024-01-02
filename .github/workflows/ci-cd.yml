@@ -60,3 +60,11 @@ jobs:
           docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:api-latest ./api
           docker push ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:api-${{ github.sha }}
           docker push ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:api-latest
+
+      - name: Build and Push Custom Airbyte Image
+        if: contains(github.event.head_commit.modified, 'custom-airbyte-connector/')
+        run: |
+          docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:custom-airbyte-connector-${{ github.sha }} ./custom-airbyte-connector
+          docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:custom-airbyte-connector-latest ./custom-airbyte-connector
+          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:custom-airbyte-connector-${{ github.sha }}
+          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:custom-airbyte-connector-latest
