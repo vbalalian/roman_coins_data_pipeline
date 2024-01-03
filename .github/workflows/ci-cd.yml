@@ -2,9 +2,9 @@ name: Continuous Integration and Deployment
 
 on: 
   push:
-    branches: [master]
+    branches: [master, cicd-testing]
   pull_request:
-    branches: [master]
+    branches: [master, cicd-testing]
 
 jobs:
   build-and-test:
@@ -26,7 +26,7 @@ jobs:
         run: docker-compose -f compose.test.yaml down
 
   deploy:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/cicd-testing'
     needs: build-and-test
     runs-on: ubuntu-latest
     
