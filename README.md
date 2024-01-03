@@ -2,7 +2,7 @@
 
 # Roman Coins
 ## A (work in progress) end-to-end data pipeline project
-[![CI/CD](https://github.com/vbalalian/RomanCoins/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/vbalalian/RomanCoins/actions/workflows/ci-cd.yml)
+[![Continuous Integration](https://github.com/vbalalian/RomanCoins/actions/workflows/ci.yml/badge.svg)](https://github.com/vbalalian/RomanCoins/actions/workflows/ci.yml)
 
 Extracting, Loading, and Transforming data on Roman Coins gathered from wildwinds.com
 
@@ -16,8 +16,17 @@ Scrapes data on coins from the Roman Empire from wildwinds.com, and loads the da
 
 Serves data from the roman coins dataset, and allows data addition and manipulation via POST, PUT, and PATCH endpoints. Data is continuously added during web scraping. 
 
+### [Airbyte](custom_airbyte_connector/source_roman_coin_api/source.py)
+
+Custom Airbyte connector streams incremental data from the api.
+
+## Requirements:
+
+[Docker](https://docs.docker.com/engine/install/)
+[Docker Compose](https://docs.docker.com/compose/install/)
+[Airbyte](https://docs.airbyte.com/deploying-airbyte/local-deployment)
+
 ## To Run:
-**(Requires Docker with Docker Compose)**
 
 Terminal Commands:
 ```
@@ -26,3 +35,4 @@ cd roman_coins_data_pipeline
 docker compose up -d
 ```
 Access version 1 of the API at http://localhost:8010/v1/
+(Try out the different endpoints using the interactive documentation at http://localhost:8010/v1/docs)
