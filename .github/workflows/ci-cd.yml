@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-and-test:
-    if: github.event_name == 'pull_request' && github.ref == 'refs/heads/master'
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
 
     steps:
