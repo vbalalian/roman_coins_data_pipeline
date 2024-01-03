@@ -13,7 +13,7 @@ from airbyte_cdk.sources.streams.http import HttpStream
 
 url_base = "http://host.docker.internal:8010/v1/"
 
-# Basic full refresh stream
+# Incremental stream
 class RomanCoinApiStream(HttpStream):
 
     url_base = url_base
@@ -65,7 +65,7 @@ class RomanCoinApiStream(HttpStream):
 
     def parse_response(self, response: requests.Response, stream_state: Mapping[str, Any], stream_slice: Mapping[str, Any] = None, next_page_token: Mapping[str, Any] = None) -> Iterable[Mapping]:
         json_response = response.json()
-        records = json_response.get('data', []) 
+        records = json_response.get('data', [])  # Extract records from 'data' key
 
         for record in records:
             record_modified = datetime.fromisoformat(record[self.cursor_field])
