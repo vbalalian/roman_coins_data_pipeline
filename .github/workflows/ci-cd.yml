@@ -36,26 +36,21 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
 
-      - name: Prepare File Lists
-        id: prepare_files
+      - name: Debug Modified Files
         run: |
-          echo "Modified files: ${{ join(github.event.head_commit.modified, ', ') }}"
-          echo "Added files: ${{ join(github.event.head_commit.added, ', ') }}"
-          FILES="${{ join(github.event.head_commit.modified, '\n') }} ${{ join(github.event.head_commit.added, '\n') }}"
-          echo "FILES=$FILES" >> $GITHUB_ENV
-
-      - name: Debugging Step - Print Files
+          echo "Modified files: ${{ toJson(github.event.head_commit.modified) }}"
+    
+      - name: Debug Added Files
         run: |
-          echo "Files to check:"
-          echo "$FILES"
-
+          echo "Added files: ${{ toJson(github.event.head_commit.added) }}"
+    
       - name: Check Modified and Added Directories
-        id: check_dirs
         run: |
           MODIFIED_WEB_SCRAPING="false"
           MODIFIED_API="false"
           MODIFIED_CUSTOM_AIRBYTE="false"
-          FILES="${{ join(github.event.head_commit.modified, '\n') }} ${{ join(github.event.head_commit.added, '\n') }}"
+          FILES=$(echo "${{ join(github.event.head_commit.modified, ' ') }} ${{ join(github.event.head_commit.added, ' ') }}")
+          echo "Files to check: $FILES"
           for file in $FILES; do
             if [[ $file == web_scraping/* ]]; then
               MODIFIED_WEB_SCRAPING="true"
