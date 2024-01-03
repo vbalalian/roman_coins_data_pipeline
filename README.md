@@ -22,8 +22,8 @@ Custom Airbyte connector streams incremental data from the api.
 
 ## Requirements:
 
-[Docker](https://docs.docker.com/engine/install/)
-[Docker Compose](https://docs.docker.com/compose/install/)
+[Docker](https://docs.docker.com/engine/install/)\
+[Docker Compose](https://docs.docker.com/compose/install/)\
 [Airbyte](https://docs.airbyte.com/deploying-airbyte/local-deployment)
 
 ## To Run:
@@ -34,5 +34,5 @@ git clone https://github.com/vbalalian/roman_coins_data_pipeline.git
 cd roman_coins_data_pipeline
 docker compose up -d
 ```
-Access version 1 of the API at http://localhost:8010/v1/
+Access version 1 of the API at http://localhost:8010/v1/ \
 (Try out the different endpoints using the interactive documentation at http://localhost:8010/v1/docs)
