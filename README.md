@@ -16,9 +16,9 @@ Scrapes data on coins from the Roman Empire from wildwinds.com, and loads the da
 
 Serves data from the roman coins dataset, and allows data addition and manipulation via POST, PUT, and PATCH endpoints. Data is continuously added during web scraping. 
 
-### [Airbyte](custom_airbyte_connector/source_roman_coin_api/source.py)
+### [Custom Airbyte Connector](custom_airbyte_connector/source_roman_coin_api/source.py)
 
-Custom Airbyte connector streams incremental data from the api.
+Streams incremental data from the api.
 
 ## Requirements:
 
@@ -28,7 +28,8 @@ Custom Airbyte connector streams incremental data from the api.
 
 ## To Run:
 
-Terminal Commands:
+**Step 1:**
+Run Web Scraper and API:
 ```
 git clone https://github.com/vbalalian/roman_coins_data_pipeline.git
 cd roman_coins_data_pipeline
@@ -36,3 +37,28 @@ docker compose up -d
 ```
 Access version 1 of the API at http://localhost:8010/v1/ \
 (Try out the different endpoints using the interactive documentation at http://localhost:8010/v1/docs)
+
+**Step 2:**
+Build Custom Airbyte Connector Image:
+```
+cd custom-airbyte-connector
+docker build . -t airbyte/source-roman-coins-api:latest
+```
+
+**Step 3:**
+Add Custom Airbyte Connector to Airbyte instance via Airbyte UI:
+- Access Airbyte UI at http://localhost:8000
+- Enter Username and Password (default: airbyte/password)
+- Enter an email for service notifications
+- Navigate to "Settings" -> "Workspace Settings" -> "Sources"
+- Click "+ New connector"
+- Click "Add a new Docker connector"
+- Input fields:
+  - Connector display name: Roman Coins API
+  - Docker repository name: airbyte/source-roman-coins-api
+  - Docker image tag: latest
+- Click "Add"
+- Input field:
+  - start_date: (enter a date on or before the current date)
+- Click "Set up source"
+
