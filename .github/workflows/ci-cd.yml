@@ -36,13 +36,9 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
 
-      - name: Debug Modified Files
+      - name: Print Github Context
         run: |
-          echo "Modified files: ${{ toJson(github.event.head_commit.modified) }}"
-    
-      - name: Debug Added Files
-        run: |
-          echo "Added files: ${{ toJson(github.event.head_commit.added) }}"
+          echo "${{ toJson(github) }}"
     
       - name: Check Modified and Added Directories
         run: |
