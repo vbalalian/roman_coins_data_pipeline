@@ -1,0 +1,24 @@
+name: Deploy Web Scraper
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'web_scraping/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+  
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+        
+      - name: Build and Push Web Scraper Image
+        run: |
+          docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:web_scraper-${{ github.sha }} ./web_scraping
+          docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:web_scraper-latest ./web_scraping
+          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:web_scraper-${{ github.sha }}
+          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:web_scraper-latest
