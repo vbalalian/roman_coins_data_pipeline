@@ -16,7 +16,7 @@ Scrapes data on coins from the Roman Empire from wildwinds.com, and loads the da
 
 Serves data from the roman coins dataset, and allows data addition and manipulation via POST, PUT, and PATCH endpoints. Data is continuously added during web scraping. 
 
-### [Custom Airbyte Connector](custom_airbyte_connector/source-roman-coin-api/source.py)
+### [Custom Airbyte Connector](custom-airbyte-connector/source_roman_coin_api/source.py)
 
 Streams incremental data from the api.
 
