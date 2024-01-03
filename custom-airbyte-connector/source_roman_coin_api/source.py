@@ -5,6 +5,7 @@
 from datetime import datetime, timedelta
 from typing import Any, Iterable, List, Mapping, MutableMapping, Optional, Tuple
 import requests
+
 from airbyte_cdk.sources import AbstractSource
 from airbyte_cdk.sources.streams import Stream
 from airbyte_cdk.sources.streams.http import HttpStream
@@ -64,7 +65,7 @@ class RomanCoinApiStream(HttpStream):
 
     def parse_response(self, response: requests.Response, stream_state: Mapping[str, Any], stream_slice: Mapping[str, Any] = None, next_page_token: Mapping[str, Any] = None) -> Iterable[Mapping]:
         json_response = response.json()
-        records = json_response.get('data', [])  # Extract records from 'data' key
+        records = json_response.get('data', []) 
 
         for record in records:
             record_modified = datetime.fromisoformat(record[self.cursor_field])
