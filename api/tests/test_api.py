@@ -164,7 +164,8 @@ def test_read_coins(test_client, test_database):
     assert len(response.json()["data"]) == 1
 
     response = test_client.get(r"/v1/coins/?min_diameter=30")
-    assert response.status_code == 400
+    assert response.status_code == 200
+    assert len(response.json()["data"]) == 0
 
 # Coin Search endpoint
 def test_search_coins(test_client, test_database):
@@ -182,8 +183,8 @@ def test_search_coins(test_client, test_database):
 
     # Query with no results
     response = test_client.get(r"/v1/coins/search?query=Caligula")
-    assert response.status_code == 400
-    assert response.json()["detail"]== "No matching coins found"
+    assert response.status_code == 200
+    assert len(response.json()) == 0
 
     # Empty query
     response = test_client.get(r"/v1/coins/search?query=")
