@@ -2,7 +2,7 @@ name: Deploy Custom Airbyte Connector
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
     paths:
       - 'custom-airbyte-connector/**'
 

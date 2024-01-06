@@ -240,13 +240,10 @@ async def read_coins(
             items_per_page=page_size
         )
 
-        if coins:
-            return PaginatedResponse(
-                data = [dict(row) for row in coins],
-                pagination=pagination
-            )
-        else:
-            raise HTTPException(status_code=400, detail='No matching coins found')
+        return PaginatedResponse(
+            data = [dict(row) for row in coins] if coins else [],
+            pagination=pagination
+        )
             
     except psycopg2.Error as e:
         print('Database error:', e)
@@ -272,10 +269,7 @@ async def search_coins(
         print('Search error:', e)
     finally:
         cur.close()
-    if search_result:
-        return [dict(row) for row in search_result]
-    else:
-        raise HTTPException(status_code=400, detail='No matching coins found')
+    return [dict(row) for row in search_result] if search_result else []
 
 # Coins by ID endpoint
 @app.get('/v1/coins/id/{coin_id}', response_model=Coin, response_model_exclude_none=True)
