@@ -2,7 +2,7 @@ name: Deploy Web Scraper
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
     paths:
       - 'web_scraping/**'
 
