@@ -1,12 +1,12 @@
 ![roman_counting_coins](https://github.com/vbalalian/RomanCoins/assets/120220346/d52d3ba8-1f29-488a-82ec-9de71460daaa)
 
 # Roman Coins
-## A (work in progress) end-to-end data pipeline project
+## A work-in-progress ELT pipeline project
 [![Continuous Integration](https://github.com/vbalalian/RomanCoins/actions/workflows/ci.yml/badge.svg)](https://github.com/vbalalian/RomanCoins/actions/workflows/ci.yml)
 
 Extracting, Loading, and Transforming data on Roman Coins gathered from wildwinds.com
 
-**Tools:** Python, PostgreSQL, Docker, FastAPI, BeautifulSoup
+**Tools:** Python, PostgreSQL, Docker, FastAPI, Airbyte
 
 ### [Web Scraper](web_scraping/web_scraper.py)
 
