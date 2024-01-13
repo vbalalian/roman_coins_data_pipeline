@@ -1,7 +1,7 @@
 #
 # Copyright (c) 2023 Airbyte, Inc., all rights reserved.
 #
-
+import os
 from datetime import datetime, timedelta
 from typing import Any, Iterable, List, Mapping, MutableMapping, Optional, Tuple
 import requests
@@ -10,7 +10,7 @@ from airbyte_cdk.sources.streams import Stream, IncrementalMixin
 from airbyte_cdk.sources.streams.http import HttpStream
 # from airbyte_cdk.sources.streams.http.auth import TokenAuthenticator # Authentication not currently implemented
 
-url_base = "http://host.docker.internal:8010/v1/"
+url_base = f'{os.getenv("HOST", "http://host.docker.internal")}:8010/v1/'
 
 # Incremental stream
 class RomanCoinApiStream(HttpStream, IncrementalMixin):
@@ -22,10 +22,10 @@ class RomanCoinApiStream(HttpStream, IncrementalMixin):
     cursor_field = "modified"
     primary_key = "id"
 
-    def __init__(self, config:Mapping[str, Any], start_date:datetime, **kwargs):
+    def __init__(self, config:Mapping[str, Any], **kwargs):
         super().__init__()
-        self.start_date = start_date
-        self._cursor_value = datetime.strptime(start_date, "%Y-%m-%dT%H:%M:%S.%f") if isinstance(start_date, str) else start_date
+        self.start_date = datetime.strptime(config["start_date"], '%Y-%m-%d')
+        self._cursor_value = datetime.strptime(self.start_date, "%Y-%m-%dT%H:%M:%S.%f") if isinstance(self.start_date, str) else self.start_date
     
     @property
     def state(self) -> Mapping[str, Any]:
@@ -87,5 +87,4 @@ class SourceRomanCoinApi(AbstractSource):
             return False, f"Connection check failed: {e}"        
 
     def streams(self, config: Mapping[str, Any]) -> List[Stream]:
-        start_date = datetime.strptime(config["start_date"], "%Y-%m-%d")
-        return [RomanCoinApiStream(config=config, start_date=start_date)]
+        return [RomanCoinApiStream(config=config)]

@@ -6,7 +6,7 @@
 
 Extracting, Loading, and Transforming data on Roman Coins gathered from wildwinds.com
 
-**Tools:** Python, PostgreSQL, Docker, FastAPI, Airbyte
+**Tools:** Python, PostgreSQL, Docker, FastAPI, Airbyte, MinIO
 
 ### [Web Scraper](web_scraping/web_scraper.py)
 
@@ -16,9 +16,13 @@ Scrapes data on coins from the Roman Empire from wildwinds.com, and loads the da
 
 Serves data from the roman coins dataset, and allows data addition and manipulation via POST, PUT, and PATCH endpoints. Data is continuously added during web scraping. 
 
-### [Custom Airbyte Connector](custom-airbyte-connector/source_roman_coin_api/source.py)
+### [Airbyte](airbyte-api-minio-connection/airbyte_connection_config.py)
 
-Streams incremental data from the api.
+[Custom airbyte connector](custom-airbyte-connector/source_roman_coin_api/source.py) streams incremental data from the API to a standalone MinIO bucket.
+
+### [MinIO](https://min.io)
+
+Resilient storage for the incoming data stream. Data is replicated ["at least once"](https://docs.airbyte.com/using-airbyte/core-concepts/sync-modes/incremental-append-deduped#inclusive-cursors) by Airbyte, so some duplicated data is acceptable at this stage. Deduplication will be easily handled by dbt at the next stage of the pipeline.
 
 ## Requirements:
 
@@ -28,37 +32,23 @@ Streams incremental data from the api.
 
 ## To Run:
 
-**Step 1:**
-Run Web Scraper and API:
+**(Docker and Airbyte must be running in order to proceed)**
+
+**Step 1:(Optional)** Set preferred credentials/variables in project .env file
+
+**Step 2:** Run the following terminal commands
+
 ```
 git clone https://github.com/vbalalian/roman_coins_data_pipeline.git
 cd roman_coins_data_pipeline
-docker compose up -d
+docker compose up
 ```
-Access version 1 of the API at http://localhost:8010/v1/ \
-(Try out the different endpoints using the interactive documentation at http://localhost:8010/v1/docs)
+This will run the web scraper, the API, and MinIO, then build the custom Airbyte connector, and configure the API-Airbyte-Minio connection. Currently, syncs must be manually triggered via the Airbyte UI. The next stage of this project is to handle orchestration via Dagster.
 
-**Step 2:**
-Build Custom Airbyte Connector Image:
-```
-cd custom-airbyte-connector
-docker build . -t airbyte/source-roman-coins-api:latest
-```
+Access the API directly at http://localhost:8010, or interact with the different endpoints at http://localhost:8010/docs
 
-**Step 3:**
-Add Custom Airbyte Connector to Airbyte instance via Airbyte UI:
-- Access Airbyte UI at http://localhost:8000
-- Enter Username and Password (default: airbyte/password)
-- Enter an email for service notifications
-- Navigate to "Settings" -> "Workspace Settings" -> "Sources"
-- Click "+ New connector"
-- Click "Add a new Docker connector"
-- Input fields:
-  - Connector display name: Roman Coins API
-  - Docker repository name: airbyte/source-roman-coins-api
-  - Docker image tag: latest
-- Click "Add"
-- Input field:
-  - start_date: (enter a date on or before the current date)
-- Click "Set up source"
+Access the Airbyte UI at http://localhost:8000
 
+Access the MinIO Console at http://localhost:9090
+
+View the web_scraper container logs in Docker to follow the progress of the Web Scraping

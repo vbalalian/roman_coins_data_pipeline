@@ -337,6 +337,9 @@ def scrape_and_load(conn:psycopg2.extensions.connection, state_path:str | None, 
 def main():
     '''Scrapes, processes, and loads data from over 200 page requests, which 
     takes a couple hours due to required 30-second delay between requests)'''
+    with connect_db(**db_info) as conn:
+        create_table(conn, table_name, table_columns, column_dtypes)
+    conn.close()
     print("Sourcing Roman Empire coin pages...")
     empire_pages = list(set(get_pages('https://www.wildwinds.com/coins/ric/i.html')))
     sleep(30)
@@ -344,7 +347,6 @@ def main():
     republic_pages = list(set(get_pages('https://www.wildwinds.com/coins/rsc/i.html')))
     combined_pages = sorted(empire_pages + republic_pages)
     with connect_db(**db_info) as conn:
-        create_table(conn, table_name, table_columns, column_dtypes)
         scrape_and_load(conn, state_path, combined_pages, table_name)
     conn.close()
 
