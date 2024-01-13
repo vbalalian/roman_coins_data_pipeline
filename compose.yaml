@@ -2,38 +2,93 @@ services:
   api:
     build: ./api
     environment:
-      - DB_USER=postgres
-      - DB_PASSWORD=postgres
-      - DB_NAME=roman_coins
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_NAME=${POSTGRES_DB}
     ports:
       - 8010:80
     depends_on:
+      web_scraper:
+        condition: service_started
       db:
         condition: service_healthy
   web_scraper:
     build: ./web_scraping
+    environment:
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_NAME=${POSTGRES_DB}
     volumes:
-      - flag:/app/data
+      - web-scraper-flag:/app/data
     depends_on:
       db:
         condition: service_healthy
   db:
     image: postgres:latest
     restart: unless-stopped
-    user: postgres
     volumes:
       - db-data:/var/lib/postgresql/data
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=roman_coins
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
     expose:
       - 5432
     healthcheck:
-      test: [ "CMD", "pg_isready" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
       interval: 10s
       timeout: 5s
       retries: 5
+  minio:
+    image: minio/minio:latest
+    volumes:
+      - minio-data:/data
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+    command: server --console-address ":9090" /data
+    ports:
+      - 9000:9000
+      - 9090:9090
+  minio-setup:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until mc config host add myminio http://minio:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD}; do
+        echo 'Waiting for MinIO...'
+        sleep 5
+      done;
+      mc mb myminio/${MINIO_BUCKET_NAME};
+      mc admin user add myminio ${MINIO_NEW_USER} ${MINIO_NEW_USER_PASSWORD};
+      mc admin policy attach myminio readwrite --user=${MINIO_NEW_USER};
+      "
+  custom-airbyte-connector:
+    environment:
+      - HOST=${HOST}
+    build:
+      context: ./custom-airbyte-connector
+      dockerfile: Dockerfile
+    image: airbyte/source-roman-coins-api:latest
+    pull_policy: build
+  airbyte-configurator:
+    depends_on:
+      - api
+      - minio-setup
+    environment:
+      - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME}
+      - MINIO_NEW_USER=${MINIO_NEW_USER}
+      - MINIO_NEW_USER_PASSWORD=${MINIO_NEW_USER_PASSWORD}
+      - AIRBYTE_HOST=${HOST}
+      - AIRBYTE_USERNAME=${AIRBYTE_USERNAME}
+      - AIRBYTE_PASSWORD=${AIRBYTE_PASSWORD}
+      - CONNECTOR_START_DATE=${CONNECTOR_START_DATE}
+    build: 
+      context: ./airbyte-api-minio-connection
+      dockerfile: Dockerfile
+    pull_policy: build
 volumes:
   db-data:
-  flag:
+  web-scraper-flag:
+  minio-data:
