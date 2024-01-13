@@ -1,7 +1,7 @@
 ![roman_counting_coins](https://github.com/vbalalian/RomanCoins/assets/120220346/d52d3ba8-1f29-488a-82ec-9de71460daaa)
 
 # Roman Coins
-## A work-in-progress ELT pipeline project
+## End-to-end ELT pipeline project
 [![Continuous Integration](https://github.com/vbalalian/RomanCoins/actions/workflows/ci.yml/badge.svg)](https://github.com/vbalalian/RomanCoins/actions/workflows/ci.yml)
 
 Extracting, Loading, and Transforming data on Roman Coins gathered from wildwinds.com
@@ -32,12 +32,11 @@ Resilient storage for the incoming data stream. Data is replicated ["at least on
 
 ## To Run:
 
-**(Docker and Airbyte must be running in order to proceed)**
+**Step 1:** Ensure Docker and Airbyte are both up and running.
 
-**Step 1:(Optional)** Set preferred credentials/variables in project .env file
+**Step 2: (Optional)** Set preferred credentials/variables in project .env file
 
-**Step 2:** Run the following terminal commands
-
+**Step 3:** Run the following terminal commands:
 ```
 git clone https://github.com/vbalalian/roman_coins_data_pipeline.git
 cd roman_coins_data_pipeline
@@ -45,10 +44,10 @@ docker compose up
 ```
 This will run the web scraper, the API, and MinIO, then build the custom Airbyte connector, and configure the API-Airbyte-Minio connection. Currently, syncs must be manually triggered via the Airbyte UI. The next stage of this project is to handle orchestration via Dagster.
 
-Access the API directly at http://localhost:8010, or interact with the different endpoints at http://localhost:8010/docs
+- View the web_scraper container logs in Docker to follow the progress of the Web Scraping
 
-Access the Airbyte UI at http://localhost:8000
+- Access the API directly at http://localhost:8010, or interact with the different endpoints at http://localhost:8010/docs
 
-Access the MinIO Console at http://localhost:9090
+- Access the Airbyte UI at http://localhost:8000
 
-View the web_scraper container logs in Docker to follow the progress of the Web Scraping
+- Access the MinIO Console at http://localhost:9090
