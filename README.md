@@ -6,7 +6,7 @@
 
 Extracting, Loading, and Transforming data on Roman Coins gathered from wildwinds.com
 
-**Tools:** Python, PostgreSQL, Docker, FastAPI, Airbyte, MinIO
+**Tools:** Python, PostgreSQL, Docker, FastAPI, Airbyte, MinIO, Dagster
 
 ### [Web Scraper](web_scraping/web_scraper.py)
 
@@ -23,6 +23,10 @@ Serves data from the roman coins dataset, and allows data addition and manipulat
 ### [MinIO](https://min.io)
 
 Resilient storage for the incoming data stream. Data is replicated ["at least once"](https://docs.airbyte.com/using-airbyte/core-concepts/sync-modes/incremental-append-deduped#inclusive-cursors) by Airbyte, so some duplicated data is acceptable at this stage. Deduplication will be easily handled by dbt at the next stage of the pipeline.
+
+### [Dagster](orchestration)
+
+Automatically triggers Airbyte syncs every 30 minutes. 
 
 ## Requirements:
 
@@ -42,7 +46,7 @@ git clone https://github.com/vbalalian/roman_coins_data_pipeline.git
 cd roman_coins_data_pipeline
 docker compose up
 ```
-This will run the web scraper, the API, and MinIO, then build the custom Airbyte connector, and configure the API-Airbyte-Minio connection. Currently, syncs must be manually triggered via the Airbyte UI. The next stage of this project is to handle orchestration via Dagster.
+This will run the web scraper, the API, MinIO, and [Dagster](https://dagster.io); then build the custom Airbyte connector, configure the API-Airbyte-Minio connection, and trigger Airbyte syncs every 30 minutes.
 
 - View the web_scraper container logs in Docker to follow the progress of the Web Scraping
 
@@ -51,3 +55,5 @@ This will run the web scraper, the API, and MinIO, then build the custom Airbyte
 - Access the Airbyte UI at http://localhost:8000
 
 - Access the MinIO Console at http://localhost:9090
+
+- Access the Dagster UI at http://localhost:3000
