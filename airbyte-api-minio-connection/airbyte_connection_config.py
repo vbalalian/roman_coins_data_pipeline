@@ -256,7 +256,7 @@ if __name__ == '__main__':
     destination_config = {
         "destinationType": "s3",
         "s3_bucket_region": "us-west-2",
-        "format": {"format_type": "CSV", "flattening": "No flattening", 
+        "format": {"format_type": "CSV", "flattening": "Root level flattening", 
                 "compression": { "compression_type": "No Compression" }},
         "access_key_id": os.getenv("MINIO_NEW_USER", "roman-coins-user"),
         "secret_access_key": os.getenv("MINIO_NEW_USER_PASSWORD", "nonprodpasswd"),
@@ -279,11 +279,35 @@ if __name__ == '__main__':
                             destination_config=destination_config)
     
     print(f"AIRBYTE STATUS: {airbyte.status()}")
-    print('ADDING CUSTOM SOURCE...')
-    print(airbyte.add_custom_source())
-    print('CREATING SOURCE...')
-    print(airbyte.create_source(start_date=os.getenv("CONNECTOR_START_DATE", "2024-01-01")))
-    print('CREATING DESTINATION...')
-    print(airbyte.create_destination())
-    print('CREATING CONNECTION...')
-    print(airbyte.create_connection())
+    
+    # Add custom source connector to airbyte instance if it doesn't already exist
+    custom_source_exists = any(source['name'] == 'Roman Coins API' for source in (airbyte.instanceSources() or []))
+    if not custom_source_exists:
+        print('ADDING CUSTOM SOURCE...')
+        print(airbyte.add_custom_source())
+    else:
+        print('CUSTOM SOURCE CONNECTOR ALREADY EXISTS.')
+
+    # Create airbyte source if it doesn't already exist
+    active_source_exists = any(source['name'] == 'Roman Coins API' for source in (airbyte.activeSources() or []))
+    if not active_source_exists:
+        print('CREATING SOURCE...')
+        print(airbyte.create_source(start_date=os.getenv("CONNECTOR_START_DATE", "2024-01-01")))
+    else:
+        print('SOURCE ALREADY EXISTS.')
+
+    # Create airbyte destination if it doesn't already exist
+    active_destination_exists = any(source['name'] == 'MinIO' for source in (airbyte.activeDestinations() or []))
+    if not active_destination_exists:
+        print('CREATING DESTINATION...')
+        print(airbyte.create_destination())
+    else:
+        print('DESTINATION ALREADY EXISTS.')
+
+    # Create airbyte connection if it doesn't already exist
+    active_connection_exists = any(source['name'] == 'Roman Coins API - MinIO' for source in (airbyte.activeConnections() or []))
+    if not active_connection_exists:
+        print('CREATING CONNECTION...')
+        print(airbyte.create_connection())
+    else:
+        print('CONNECTION ALREADY EXISTS.')

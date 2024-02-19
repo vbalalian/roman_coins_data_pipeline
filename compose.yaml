@@ -12,6 +12,7 @@ services:
         condition: service_started
       db:
         condition: service_healthy
+
   web_scraper:
     build: ./web_scraping
     environment:
@@ -23,8 +24,9 @@ services:
     depends_on:
       db:
         condition: service_healthy
+
   db:
-    image: postgres:latest
+    image: postgres
     restart: unless-stopped
     volumes:
       - db-data:/var/lib/postgresql/data
@@ -39,8 +41,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
   minio:
-    image: minio/minio:latest
+    image: minio/minio
     volumes:
       - minio-data:/data
     environment:
@@ -50,8 +53,9 @@ services:
     ports:
       - 9000:9000
       - 9090:9090
+
   minio-setup:
-    image: minio/mc:latest
+    image: minio/mc
     depends_on:
       - minio
     entrypoint: >
@@ -64,14 +68,16 @@ services:
       mc admin user add myminio ${MINIO_NEW_USER} ${MINIO_NEW_USER_PASSWORD};
       mc admin policy attach myminio readwrite --user=${MINIO_NEW_USER};
       "
+
   custom-airbyte-connector:
     environment:
-      - HOST=${HOST}
+      - AIRBYTE_HOST=http://${HOST}
     build:
       context: ./custom-airbyte-connector
       dockerfile: Dockerfile
     image: airbyte/source-roman-coins-api:latest
     pull_policy: build
+
   airbyte-configurator:
     depends_on:
       - api
@@ -80,7 +86,7 @@ services:
       - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME}
       - MINIO_NEW_USER=${MINIO_NEW_USER}
       - MINIO_NEW_USER_PASSWORD=${MINIO_NEW_USER_PASSWORD}
-      - AIRBYTE_HOST=${HOST}
+      - AIRBYTE_HOST=http://${HOST}
       - AIRBYTE_USERNAME=${AIRBYTE_USERNAME}
       - AIRBYTE_PASSWORD=${AIRBYTE_PASSWORD}
       - CONNECTOR_START_DATE=${CONNECTOR_START_DATE}
@@ -88,6 +94,55 @@ services:
       context: ./airbyte-api-minio-connection
       dockerfile: Dockerfile
     pull_policy: build
+
+  dagster-webserver:
+    depends_on:
+      - db
+      - airbyte-configurator
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - DB_HOST=db
+      - AIRBYTE_USERNAME=${AIRBYTE_USERNAME}
+      - AIRBYTE_PASSWORD=${AIRBYTE_PASSWORD}
+      - HOST=${HOST}
+    build: 
+      context: ./orchestration
+      dockerfile: Dockerfile
+    entrypoint:
+      - dagster-webserver
+      - -h
+      - "0.0.0.0"
+      - -p
+      - "3000"
+      - -w
+      - workspace.yaml
+    expose:
+      - 3000
+    ports:
+      - 3000:3000
+
+  dagster-daemon:
+    depends_on:
+      - db
+      - airbyte-configurator
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - DB_HOST=db
+      - AIRBYTE_USERNAME=${AIRBYTE_USERNAME}
+      - AIRBYTE_PASSWORD=${AIRBYTE_PASSWORD}
+      - HOST=${HOST}
+    build: 
+      context: ./orchestration
+      dockerfile: Dockerfile
+    entrypoint:
+      - dagster-daemon
+      - run
+    restart: on-failure
+
 volumes:
   db-data:
   web-scraper-flag:
