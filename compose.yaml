@@ -73,7 +73,7 @@ services:
     environment:
       - AIRBYTE_HOST=http://${HOST}
     build:
-      context: ./custom-airbyte-connector
+      context: ./extract-load-transform/custom-airbyte-connector
       dockerfile: Dockerfile
     image: airbyte/source-roman-coins-api:latest
     pull_policy: build
@@ -91,7 +91,7 @@ services:
       - AIRBYTE_PASSWORD=${AIRBYTE_PASSWORD}
       - CONNECTOR_START_DATE=${CONNECTOR_START_DATE}
     build: 
-      context: ./airbyte-api-minio-connection
+      context: ./extract-load-transform/airbyte-api-minio-connection
       dockerfile: Dockerfile
     pull_policy: build
 
@@ -108,7 +108,7 @@ services:
       - AIRBYTE_PASSWORD=${AIRBYTE_PASSWORD}
       - HOST=${HOST}
     build: 
-      context: ./orchestration
+      context: ./extract-load-transform/orchestration
       dockerfile: Dockerfile
     entrypoint:
       - dagster-webserver
@@ -136,7 +136,7 @@ services:
       - AIRBYTE_PASSWORD=${AIRBYTE_PASSWORD}
       - HOST=${HOST}
     build: 
-      context: ./orchestration
+      context: ./extract-load-transform/orchestration
       dockerfile: Dockerfile
     entrypoint:
       - dagster-daemon
