@@ -4,7 +4,7 @@ on:
   push:
     branches: [master]
     paths:
-      - 'custom-airbyte-connector/**'
+      - 'extract-load-transform/custom-airbyte-connector/**'
 
 jobs:
   deploy:
@@ -24,7 +24,7 @@ jobs:
         
       - name: Build and Push Custom Airbyte Connector Image
         run: |
-          docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:custom-airbyte-connector-${{ github.sha }} ./custom-airbyte-connector
-          docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:custom-airbyte-connector-latest ./custom-airbyte-connector
+          docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:custom-airbyte-connector-${{ github.sha }} ./extract-load-transform/custom-airbyte-connector
+          docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:custom-airbyte-connector-latest ./extract-load-transform/custom-airbyte-connector
           docker push ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:custom-airbyte-connector-${{ github.sha }}
           docker push ${{ secrets.DOCKER_HUB_USERNAME }}/roman-coins-data-pipeline:custom-airbyte-connector-latest
