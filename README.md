@@ -16,9 +16,9 @@ Scrapes data on coins from the Roman Empire from wildwinds.com, and loads the da
 
 Serves data from the roman coins dataset, and allows data addition and manipulation via POST, PUT, and PATCH endpoints. Data is continuously added during web scraping. 
 
-### [Airbyte](airbyte-api-minio-connection/airbyte_connection_config.py)
+### [Airbyte](extract-load-transform/airbyte-api-minio-connection/airbyte_connection_config.py)
 
-[Custom airbyte connector](custom-airbyte-connector/source_roman_coin_api/source.py) streams incremental data from the API to a standalone MinIO bucket.
+[Custom airbyte connector](extract-load-transform/custom-airbyte-connector/source_roman_coin_api/source.py) streams incremental data from the API to a standalone MinIO bucket.
 
 ### [MinIO](https://min.io)
 
