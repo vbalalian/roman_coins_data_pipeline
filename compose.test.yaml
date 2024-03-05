@@ -97,8 +97,12 @@ services:
 
   dagster-webserver:
     depends_on:
-      - db
-      - airbyte-configurator
+      test_db:
+        condition: service_healthy
+      airbyte-configurator:
+        condition: service_started
+    volumes:
+      - duckdb-data:/opt/dagster/app/data
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -107,6 +111,12 @@ services:
       - AIRBYTE_USERNAME=${AIRBYTE_USERNAME}
       - AIRBYTE_PASSWORD=${AIRBYTE_PASSWORD}
       - HOST=${HOST}
+      - MINIO_ENDPOINT=${HOST}:9000
+      - DUCKDB_DATABASE=${DUCKDB_DATABASE}
+      - LOADING_TABLE=${LOADING_TABLE}
+      - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME}
+      - MINIO_USER=${MINIO_NEW_USER}
+      - MINIO_PASSWORD=${MINIO_NEW_USER_PASSWORD}
     build: 
       context: ./extract-load-transform/orchestration
       dockerfile: Dockerfile
@@ -125,8 +135,12 @@ services:
 
   dagster-daemon:
     depends_on:
-      - db
-      - airbyte-configurator
+      test_db:
+        condition: service_healthy
+      airbyte-configurator:
+        condition: service_started
+    volumes:
+      - duckdb-data:/opt/dagster/app/data
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -135,6 +149,12 @@ services:
       - AIRBYTE_USERNAME=${AIRBYTE_USERNAME}
       - AIRBYTE_PASSWORD=${AIRBYTE_PASSWORD}
       - HOST=${HOST}
+      - MINIO_ENDPOINT=${HOST}:9000
+      - DUCKDB_DATABASE=${DUCKDB_DATABASE}
+      - LOADING_TABLE=${LOADING_TABLE}
+      - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME}
+      - MINIO_USER=${MINIO_NEW_USER}
+      - MINIO_PASSWORD=${MINIO_NEW_USER_PASSWORD}
     build: 
       context: ./extract-load-transform/orchestration
       dockerfile: Dockerfile
@@ -159,3 +179,4 @@ volumes:
   db-data:
   web-scraper-flag:
   minio-data:
+  duckdb-data:
