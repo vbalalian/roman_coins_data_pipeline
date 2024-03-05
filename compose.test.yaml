@@ -179,3 +179,4 @@ volumes:
   db-data:
   web-scraper-flag:
   minio-data:
+  duckdb-data:
