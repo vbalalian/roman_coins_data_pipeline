@@ -97,10 +97,10 @@ services:
 
   dagster-webserver:
     depends_on:
-      db:
+      test_db:
         condition: service_healthy
       airbyte-configurator:
-        condition: service_completed_successfully
+        condition: service_started
     volumes:
       - duckdb-data:/opt/dagster/app/data
     environment:
@@ -135,10 +135,10 @@ services:
 
   dagster-daemon:
     depends_on:
-      db:
+      test_db:
         condition: service_healthy
       airbyte-configurator:
-        condition: service_completed_successfully
+        condition: service_started
     volumes:
       - duckdb-data:/opt/dagster/app/data
     environment:
