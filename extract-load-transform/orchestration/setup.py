@@ -6,7 +6,10 @@ setup(
     install_requires=[
         "dagster",
         "dagster-cloud",
-        "dagster-airbyte"
+        "dagster-airbyte",
+        "dagster-duckdb",
+        "minio",
+        "duckdb"
     ],
     extras_require={"dev": ["dagster-webserver", "pytest"]},
 )
