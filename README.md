@@ -6,7 +6,7 @@
 
 Extracting, Loading, and Transforming data on Roman Coins gathered from wildwinds.com
 
-**Tools:** Python, PostgreSQL, Docker, FastAPI, Airbyte, MinIO, Dagster
+**Tools:** Python, PostgreSQL, Docker, FastAPI, Airbyte, MinIO, Dagster, DuckDB
 
 ### [Web Scraper](web_scraping/web_scraper.py)
 
@@ -24,9 +24,13 @@ Serves data from the roman coins dataset, and allows data addition and manipulat
 
 Resilient storage for the incoming data stream. Data is replicated ["at least once"](https://docs.airbyte.com/using-airbyte/core-concepts/sync-modes/incremental-append-deduped#inclusive-cursors) by Airbyte, so some duplicated data is acceptable at this stage. Deduplication will be easily handled by dbt at the next stage of the pipeline.
 
-### [Dagster](orchestration)
+### [Dagster](orchestration/orchestration)
 
-Automatically triggers Airbyte syncs every 30 minutes. 
+[Sensors](extract-load-transform/orchestration/orchestration/sensors/__init__.py) trigger Airbyte syncs and DuckDB loads on a minute-by-minute basis.
+
+### [DuckDB](https://duckdb.org/)
+
+Local data warehouse.
 
 ## Requirements:
 
@@ -46,7 +50,7 @@ git clone https://github.com/vbalalian/roman_coins_data_pipeline.git
 cd roman_coins_data_pipeline
 docker compose up
 ```
-This will run the web scraper, the API, MinIO, and [Dagster](https://dagster.io); then build the custom Airbyte connector, configure the API-Airbyte-Minio connection, and trigger Airbyte syncs every 30 minutes.
+This will run the web scraper, the API, MinIO, and [Dagster](https://dagster.io); then build the custom Airbyte connector, configure the API-Airbyte-Minio connection, and trigger Airbyte syncs and DuckDB load jobs automatically using sensors.
 
 - View the web_scraper container logs in Docker to follow the progress of the Web Scraping
 
@@ -57,3 +61,5 @@ This will run the web scraper, the API, MinIO, and [Dagster](https://dagster.io)
 - Access the MinIO Console at http://localhost:9090
 
 - Access the Dagster UI at http://localhost:3000
+
+- At the moment, duckdb access is limited to docker exec commands on one of the dagster services with access to the duckdb volume.
