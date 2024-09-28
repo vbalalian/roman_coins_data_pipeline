@@ -118,7 +118,7 @@ services:
       - MINIO_USER=${MINIO_NEW_USER}
       - MINIO_PASSWORD=${MINIO_NEW_USER_PASSWORD}
     build: 
-      context: ./extract-load-transform/orchestration
+      context: ./extract-load-transform/dagster-dbt
       dockerfile: Dockerfile
     entrypoint:
       - dagster-webserver
@@ -156,7 +156,7 @@ services:
       - MINIO_USER=${MINIO_NEW_USER}
       - MINIO_PASSWORD=${MINIO_NEW_USER_PASSWORD}
     build: 
-      context: ./extract-load-transform/orchestration
+      context: ./extract-load-transform/dagster-dbt
       dockerfile: Dockerfile
     entrypoint:
       - dagster-daemon
