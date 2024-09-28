@@ -102,7 +102,7 @@ services:
       airbyte-configurator:
         condition: service_completed_successfully
     volumes:
-      - duckdb-data:/opt/dagster/app/data
+      - duckdb-data:/opt/dagster-dbt/app/data
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -118,7 +118,7 @@ services:
       - MINIO_USER=${MINIO_NEW_USER}
       - MINIO_PASSWORD=${MINIO_NEW_USER_PASSWORD}
     build: 
-      context: ./extract-load-transform/orchestration
+      context: ./extract-load-transform/dagster-dbt
       dockerfile: Dockerfile
     entrypoint:
       - dagster-webserver
@@ -140,7 +140,7 @@ services:
       airbyte-configurator:
         condition: service_completed_successfully
     volumes:
-      - duckdb-data:/opt/dagster/app/data
+      - duckdb-data:/opt/dagster-dbt/app/data
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -156,7 +156,7 @@ services:
       - MINIO_USER=${MINIO_NEW_USER}
       - MINIO_PASSWORD=${MINIO_NEW_USER_PASSWORD}
     build: 
-      context: ./extract-load-transform/orchestration
+      context: ./extract-load-transform/dagster-dbt
       dockerfile: Dockerfile
     entrypoint:
       - dagster-daemon
@@ -168,3 +168,4 @@ volumes:
   web-scraper-flag:
   minio-data:
   duckdb-data:
+

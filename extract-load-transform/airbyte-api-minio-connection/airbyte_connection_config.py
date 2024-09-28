@@ -274,7 +274,7 @@ if __name__ == '__main__':
                             password=os.getenv("AIRBYTE_PASSWORD", "password"), 
                             source_name='Roman Coins API', 
                             destination_name='MinIO',
-                            connection_name='Roman Coins API - MinIO',
+                            connection_name='Extract',
                             source_definition=custom_source_definition,
                             destination_config=destination_config)
     
@@ -305,7 +305,7 @@ if __name__ == '__main__':
         print('DESTINATION ALREADY EXISTS.')
 
     # Create airbyte connection if it doesn't already exist
-    active_connection_exists = any(source['name'] == 'Roman Coins API - MinIO' for source in (airbyte.activeConnections() or []))
+    active_connection_exists = any(source['name'] == 'Extract' for source in (airbyte.activeConnections() or []))
     if not active_connection_exists:
         print('CREATING CONNECTION...')
         print(airbyte.create_connection())
