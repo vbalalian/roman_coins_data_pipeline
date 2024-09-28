@@ -1,14 +1,14 @@
-from dagster import RunRequest, SensorResult, sensor, DefaultSensorStatus
-from ..jobs import airbyte_sync_job, loading_job
+from dagster import RunRequest, SensorResult, sensor, DefaultSensorStatus, run_status_sensor, DagsterRunStatus, RunStatusSensorContext
+from ..jobs import extract_job, loading_job, transform_job
 from ..resources import MinioResource
 import os
 import requests
 
 @sensor(
-    job=airbyte_sync_job,
+    job=extract_job,
     default_status=DefaultSensorStatus.RUNNING,
-    minimum_interval_seconds=60,
-    description="Triggers airbyte_sync_job when modified records are detected in the api."
+    minimum_interval_seconds=300,
+    description="Triggers extract_job when modified records are detected in the api."
 )
 def api_sensor(context):
     previous_state = context.cursor if context.cursor else None
@@ -53,3 +53,13 @@ def extracted_file_sensor(context, storage:MinioResource):
         run_requests=run_requests,
         cursor=current_state
     )
+
+@run_status_sensor(
+    run_status=DagsterRunStatus.SUCCESS,
+    monitored_jobs=[loading_job],
+    request_job=transform_job,
+    default_status=DefaultSensorStatus.RUNNING,
+    minimum_interval_seconds=60
+)
+def loaded_data_sensor(context: RunStatusSensorContext):
+    yield RunRequest()

@@ -1,7 +1,10 @@
 from dagster import EnvVar, ConfigurableResource
 from dagster_airbyte import AirbyteResource
 from dagster_duckdb import DuckDBResource
+from dagster_dbt import DbtCliResource
 from minio import Minio
+import os
+from pathlib import Path
 
 airbyte_instance = AirbyteResource(
     host=EnvVar("HOST"),
@@ -36,3 +39,21 @@ minio_resource = MinioResource(
     session_token="",
     secure=False,
     region="")
+
+dbt_project_dir = Path(__file__).joinpath("..", "..", "..", "dbt_project").resolve()
+
+dbt_resource = DbtCliResource(project_dir=os.fspath(dbt_project_dir))
+
+# If DAGSTER_DBT_PARSE_PROJECT_ON_LOAD is set, a manifest will be created at run time.
+# Otherwise, we expect a manifest to be present in the project's target directory.
+if os.getenv("DAGSTER_DBT_PARSE_PROJECT_ON_LOAD"):
+    dbt_manifest_path = (
+        dbt_resource.cli(
+            ["--quiet", "parse"],
+            target_path=Path("target"),
+        )
+        .wait()
+        .target_path.joinpath("manifest.json")
+    )
+else:
+    dbt_manifest_path = dbt_project_dir.joinpath("target", "manifest.json")

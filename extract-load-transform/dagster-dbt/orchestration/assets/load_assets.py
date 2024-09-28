@@ -27,7 +27,7 @@ def processed_files_set(context, database: DuckDBResource) -> set:
     
     return processed_files_set
 
-@asset
+@asset()
 def unprocessed_files_list(storage: MinioResource, processed_files_set:set) -> list:
     """
     Returns a list of files in minio which haven't been processed yet
@@ -43,7 +43,7 @@ def unprocessed_files_list(storage: MinioResource, processed_files_set:set) -> l
     return unprocessed_files_list
 
 @asset
-def roman_coins(database:DuckDBResource, storage:MinioResource, unprocessed_files_list:list) -> None:
+def raw_roman_coins(database:DuckDBResource, storage:MinioResource, unprocessed_files_list:list) -> None:
     """
     The raw roman coins dataset, loaded from incremental csv files stored in 
     minio into a DuckDB database.
