@@ -18,9 +18,9 @@ jobs:
     
       - name: Build and run tests
         run: |
-            docker-compose -f compose.test.yaml up --build -d
-            docker-compose -f compose.test.yaml run web_scraper pytest
-            docker-compose -f compose.test.yaml run api pytest
+            docker compose -f compose.test.yaml up --build -d
+            docker compose -f compose.test.yaml run web_scraper pytest
+            docker compose -f compose.test.yaml run api pytest
     
       - name: Clean up
-        run: docker-compose -f compose.test.yaml down
+        run: docker compose -f compose.test.yaml down
