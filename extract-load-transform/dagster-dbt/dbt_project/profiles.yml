@@ -1,0 +1,7 @@
+dbt_project:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      schema: dbt_user
+      path: ../data/data.duckdb
