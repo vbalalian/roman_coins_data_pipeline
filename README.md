@@ -6,7 +6,7 @@
 
 Extracting, Loading, and Transforming data on Roman Coins gathered from wildwinds.com
 
-**Tools:** Python, PostgreSQL, Docker, FastAPI, Airbyte, MinIO, Dagster, DuckDB
+**Tools:** Python, PostgreSQL, Docker, FastAPI, Airbyte, MinIO, Dagster, DuckDB, dbt
 
 ### [Web Scraper](web_scraping/web_scraper.py)
 
@@ -31,6 +31,10 @@ Resilient storage for the incoming data stream. Data is replicated ["at least on
 ### [DuckDB](https://duckdb.org/)
 
 Local data warehouse.
+
+### [dbt](https://docs.getdbt.com/docs/introduction)
+
+Transforms data within the data warehouse.
 
 ## Requirements:
 
